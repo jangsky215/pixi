@@ -8,7 +8,6 @@ import (
 	"strings"
 	"unsafe"
 
-	"github.com/g3n/engine/renderer/shader"
 	"github.com/go-gl/gl/v3.3-core/gl"
 	"github.com/pkg/errors"
 )
@@ -228,7 +227,11 @@ func (fb *Framebuffer) Resize(width, height int) {
  *	Shader
  */
 type Shader struct {
-	glid uint32
+	glid        uint32
+	attribs     []Attr
+	uniforms    []Attr
+	uniformsLoc []int32
+	samplers    []int32
 }
 
 func compileShader(shaderType uint32, source string) uint32 {
@@ -253,7 +256,7 @@ func compileShader(shaderType uint32, source string) uint32 {
 	return shader
 }
 
-func NewShader(vertexSrc, fragmentSrc string) *Shader {
+func NewShader(vertexSrc, fragmentSrc string, attribs []Attr, uniforms []Attr) *Shader {
 	vertShader := compileShader(gl.VERTEX_SHADER, vertexSrc)
 	fragShader := compileShader(gl.FRAGMENT_SHADER, fragmentSrc)
 
@@ -265,7 +268,14 @@ func NewShader(vertexSrc, fragmentSrc string) *Shader {
 	gl.DeleteShader(fragShader)
 
 	shader := &Shader{
-		glid: program,
+		glid:     program,
+		attribs:  attribs,
+		uniforms: uniforms,
+	}
+
+	for i, attr := range attribs {
+		//必须在 LinkProgram 之前
+		gl.BindAttribLocation(program, uint32(i), gl.Str(attr.Name+"\x00"))
 	}
 
 	gl.LinkProgram(program)
@@ -281,7 +291,40 @@ func NewShader(vertexSrc, fragmentSrc string) *Shader {
 		panic(fmt.Errorf("failed to link program: %v", log))
 	}
 
+	for _, uniform := range uniforms {
+		loc := gl.GetUniformLocation(program, gl.Str(uniform.Name+"\x00"))
+		shader.uniformsLoc = append(shader.uniformsLoc, loc)
+		if uniform.Type == Sampler2D {
+			shader.samplers = append(shader.samplers, loc)
+		}
+	}
+
 	return shader
+}
+
+func (shader *Shader) getAttrib() {
+	program := shader.glid
+
+	var count int32
+	gl.GetProgramiv(program, gl.ACTIVE_ATTRIBUTES, &count)
+
+	var length, maxLength int32
+	gl.GetProgramiv(program, gl.ACTIVE_ATTRIBUTE_MAX_LENGTH, &maxLength)
+
+	data := make([]uint8, maxLength)
+	var xtype uint32
+
+	for i := int32(0); i < count; i++ {
+		gl.GetActiveAttrib(program, uint32(i), maxLength, &length, nil, &xtype, &data[0])
+		loc := gl.GetAttribLocation(program, &data[0])
+
+		name := string(data[:length])
+		fmt.Println(name, loc == i, xtype == gl.SAMPLER_2D)
+	}
+}
+
+func (shader *Shader) Bind() {
+	gl.UseProgram(shader.glid)
 }
 
 func (shader *Shader) Destroy() {
