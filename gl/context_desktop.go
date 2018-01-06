@@ -460,6 +460,7 @@ func (vao *VertexArrayObject) AddBuffer(buffer *Buffer) {
 }
 
 func (vao *VertexArrayObject) activate() {
+	vao.indexBuffer.bind()
 	for _, buffer := range vao.vertexBuffers {
 		buffer.bind()
 		for _, al := range buffer.attrLayouts {
@@ -482,6 +483,6 @@ func (vao *VertexArrayObject) Unbind() {
 	gl.BindVertexArray(0)
 }
 
-func (vao *VertexArrayObject) Draw(mode DrawMode, count, start int) {
+func (vao *VertexArrayObject) Draw(mode DrawMode, start, count int) {
 	gl.DrawElements(uint32(mode), int32(count), gl.UNSIGNED_SHORT, unsafe.Pointer(uintptr(start)))
 }
