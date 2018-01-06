@@ -263,8 +263,8 @@ func (fb *Framebuffer) Resize(width, height int) {
  */
 type Shader struct {
 	glid       uint32
-	attributes map[string]uint32
-	uniforms   map[string]uniformLayout
+	attributes map[string]int32
+	uniforms   map[string]int32
 	samplers   []int32
 }
 
@@ -308,8 +308,8 @@ func NewShader(vertexSrc, fragmentSrc string) *Shader {
 
 	shader := &Shader{
 		glid:       program,
-		attributes: make(map[string]uint32),
-		uniforms:   make(map[string]uniformLayout),
+		attributes: make(map[string]int32),
+		uniforms:   make(map[string]int32),
 	}
 
 	gl.LinkProgram(program)
@@ -347,7 +347,7 @@ func (shader *Shader) getAttributes() {
 		gl.GetActiveAttrib(program, uint32(i), maxLength, &length, nil, &xtype, &data[0])
 		loc := gl.GetAttribLocation(program, &data[0])
 		name := string(data[:length])
-		shader.attributes[name] = uint32(loc)
+		shader.attributes[name] = loc
 	}
 }
 
@@ -365,9 +365,9 @@ func (shader *Shader) getUniforms() {
 
 	for i := int32(0); i < count; i++ {
 		gl.GetActiveUniform(program, uint32(i), maxLength, &length, nil, &xtype, &data[0])
-		loc := gl.GetAttribLocation(program, &data[0])
+		loc := gl.GetUniformLocation(program, &data[0])
 		name := string(data[:length])
-		shader.uniforms[name] = uniformLayout{loc: loc, xtype: xtype}
+		shader.uniforms[name] = loc
 		if xtype == gl.SAMPLER_2D {
 			shader.samplers = append(shader.samplers, loc)
 		}
@@ -382,32 +382,39 @@ func (shader *Shader) Destroy() {
 	gl.DeleteShader(shader.glid)
 }
 
+// Attrib
+
 // Uniform
 func (shader *Shader) SetSampler2D(index, offset int) {
 	//绑定纹理目标
 	gl.Uniform1i(shader.samplers[index], int32(offset)) // gl.TEXTURE0 + offset
 }
 
-func (shader *Shader) SetUniform(name string, v ...float32) {
-	layout, exist := shader.uniforms[name]
+func (shader *Shader) GetUniformLocation(name string) int32 {
+	return shader.uniforms[name]
+}
+
+func (shader *Shader) SetUniformName(name string, v ...float32) {
+	loc, exist := shader.uniforms[name]
 	if !exist {
 		panic("name not exist")
 	}
-	loc := layout.loc
-	switch layout.xtype {
-	case gl.FLOAT:
+	shader.SetUniform(loc, v...)
+}
+
+func (shader *Shader) SetUniform(loc int32, v ...float32) {
+	switch len(v) {
+	case 1: //gl.FLOAT:
 		gl.Uniform1f(loc, v[0])
-	case gl.FLOAT_VEC2:
+	case 2: //gl.FLOAT_VEC2:
 		gl.Uniform2f(loc, v[0], v[1])
-	case gl.FLOAT_VEC3:
+	case 3: //gl.FLOAT_VEC3:
 		gl.Uniform3f(loc, v[0], v[1], v[2])
-	case gl.FLOAT_VEC4:
+	case 4: //gl.FLOAT_VEC4:
 		gl.Uniform4f(loc, v[0], v[1], v[2], v[3])
-	case gl.FLOAT_MAT2:
-		gl.UniformMatrix2fv(loc, 1, false, &v[0])
-	case gl.FLOAT_MAT3:
+	case 9: //gl.FLOAT_MAT3:
 		gl.UniformMatrix3fv(loc, 1, false, &v[0])
-	case gl.FLOAT_MAT4:
+	case 16: //gl.FLOAT_MAT4:
 		gl.UniformMatrix4fv(loc, 1, false, &v[0])
 	default:
 		panic("error uniform type")
@@ -456,7 +463,7 @@ func (vao *VertexArrayObject) activate() {
 	for _, buffer := range vao.vertexBuffers {
 		buffer.bind()
 		for _, al := range buffer.attrLayouts {
-			loc := vao.shader.attributes[al.name]
+			loc := uint32(vao.shader.attributes[al.name])
 			gl.EnableVertexAttribArray(loc)
 			gl.VertexAttribPointer(loc, al.num, al.xtype, al.normalized, buffer.stride, al.pointer)
 		}
