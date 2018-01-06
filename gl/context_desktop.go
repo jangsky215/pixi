@@ -380,7 +380,7 @@ func (shader *Shader) Destroy() {
 }
 
 // Attrib
-func (shader *Shader) GetAttributes() Attributes {
+func (shader *Shader) Attributes() Attributes {
 	return shader.attributes
 }
 
@@ -484,6 +484,21 @@ func (vao *VertexArrayObject) Bind() {
 
 func (vao *VertexArrayObject) Unbind() {
 	gl.BindVertexArray(0)
+}
+
+func (vao *VertexArrayObject) Clear() {
+	vao.dirty = true
+	vao.indexBuffer = nil
+	vao.vertexBuffers = nil
+	vao.attributes = nil
+}
+
+func (vao *VertexArrayObject) IndexBuffer() *Buffer {
+	return vao.indexBuffer
+}
+
+func (vao *VertexArrayObject) VertexBuffers() []*Buffer {
+	return vao.vertexBuffers
 }
 
 func (vao *VertexArrayObject) Draw(mode DrawMode, start, count int) {

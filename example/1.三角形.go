@@ -90,7 +90,7 @@ func main() {
 	indexBuffer := pixi.NewIndexBuffer(index)
 	vao.SetIndexBuffer(indexBuffer)
 
-	vao.SetAttributes(s.GetAttributes())
+	vao.SetAttributes(s.Attributes())
 	vao.Bind()
 
 	for !window.ShouldClose() {
