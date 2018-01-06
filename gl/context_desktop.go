@@ -263,15 +263,12 @@ func (fb *Framebuffer) Resize(width, height int) {
  */
 type Shader struct {
 	glid       uint32
-	attributes map[string]int32
-	uniforms   map[string]int32
+	attributes Attributes
+	uniforms   Attributes
 	samplers   []int32
 }
 
-type uniformLayout struct {
-	loc   int32
-	xtype uint32
-}
+type Attributes map[string]int32
 
 func compileShader(shaderType uint32, source string) uint32 {
 	shader := gl.CreateShader(shaderType)
@@ -308,8 +305,8 @@ func NewShader(vertexSrc, fragmentSrc string) *Shader {
 
 	shader := &Shader{
 		glid:       program,
-		attributes: make(map[string]int32),
-		uniforms:   make(map[string]int32),
+		attributes: make(Attributes),
+		uniforms:   make(Attributes),
 	}
 
 	gl.LinkProgram(program)
@@ -383,6 +380,9 @@ func (shader *Shader) Destroy() {
 }
 
 // Attrib
+func (shader *Shader) GetAttributes() Attributes {
+	return shader.attributes
+}
 
 // Uniform
 func (shader *Shader) SetSampler2D(index, offset int) {
@@ -426,7 +426,7 @@ func (shader *Shader) SetUniform(loc int32, v ...float32) {
  */
 type VertexArrayObject struct {
 	glid          uint32
-	shader        *Shader
+	attributes    Attributes
 	indexBuffer   *Buffer
 	vertexBuffers []*Buffer
 
@@ -449,9 +449,9 @@ func (vao *VertexArrayObject) SetIndexBuffer(indexBuffer *Buffer) {
 	vao.indexBuffer = indexBuffer
 }
 
-func (vao *VertexArrayObject) SetShader(shader *Shader) {
+func (vao *VertexArrayObject) SetAttributes(attributes Attributes) {
 	vao.dirty = true
-	vao.shader = shader
+	vao.attributes = attributes
 }
 
 func (vao *VertexArrayObject) AddBuffer(buffer *Buffer) {
@@ -464,7 +464,7 @@ func (vao *VertexArrayObject) activate() {
 	for _, buffer := range vao.vertexBuffers {
 		buffer.bind()
 		for _, al := range buffer.attrLayouts {
-			loc := uint32(vao.shader.attributes[al.name])
+			loc := uint32(vao.attributes[al.name])
 			gl.EnableVertexAttribArray(loc)
 			gl.VertexAttribPointer(loc, al.num, al.xtype, al.normalized, buffer.stride, al.pointer)
 		}
