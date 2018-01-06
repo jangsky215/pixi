@@ -35,6 +35,17 @@ type Buffer struct {
 	glid   uint32
 	gltype uint32
 	size   int
+
+	stride      int32
+	attrLayouts []attrLayout
+}
+
+type attrLayout struct {
+	name       string
+	num        int32
+	xtype      uint32
+	normalized bool
+	pointer    unsafe.Pointer
 }
 
 func newBuffer(gltype uint32, slice interface{}) *Buffer {
@@ -50,8 +61,28 @@ func newBuffer(gltype uint32, slice interface{}) *Buffer {
 	return buffer
 }
 
-func NewVertexBuffer(slice interface{}) *Buffer {
-	return newBuffer(gl.ARRAY_BUFFER, slice)
+func NewVertexBuffer(slice interface{}, attrs Attrs) *Buffer {
+	buffer := newBuffer(gl.ARRAY_BUFFER, slice)
+
+	buffer.attrLayouts = make([]attrLayout, len(attrs))
+	offset := uintptr(0)
+	for i, attr := range attrs {
+		layout := attrLayout{
+			name:       attr.Name,
+			num:        int32(attr.Num),
+			xtype:      uint32(attr.Type),
+			normalized: true,
+			pointer:    unsafe.Pointer(offset),
+		}
+		offset += uintptr(attr.Type.size() * attr.Num)
+		if attr.Type == Float {
+			layout.normalized = false
+		}
+		buffer.attrLayouts[i] = layout
+	}
+	buffer.stride = int32(offset)
+
+	return buffer
 }
 
 func NewIndexBuffer(slice interface{}) *Buffer {
@@ -60,6 +91,10 @@ func NewIndexBuffer(slice interface{}) *Buffer {
 
 func (buffer *Buffer) Destroy() {
 	gl.DeleteBuffers(1, &buffer.glid)
+}
+
+func (buffer *Buffer) bind() {
+	gl.BindBuffer(buffer.gltype, buffer.glid)
 }
 
 func (buffer *Buffer) update(drawType uint32, slice interface{}) {
@@ -227,11 +262,15 @@ func (fb *Framebuffer) Resize(width, height int) {
  *	Shader
  */
 type Shader struct {
-	glid        uint32
-	attribs     []Attr
-	uniforms    []Attr
-	uniformsLoc []int32
-	samplers    []int32
+	glid       uint32
+	attributes map[string]uint32
+	uniforms   map[string]uniformLayout
+	samplers   []int32
+}
+
+type uniformLayout struct {
+	loc   int32
+	xtype uint32
 }
 
 func compileShader(shaderType uint32, source string) uint32 {
@@ -256,7 +295,7 @@ func compileShader(shaderType uint32, source string) uint32 {
 	return shader
 }
 
-func NewShader(vertexSrc, fragmentSrc string, attribs []Attr, uniforms []Attr) *Shader {
+func NewShader(vertexSrc, fragmentSrc string) *Shader {
 	vertShader := compileShader(gl.VERTEX_SHADER, vertexSrc)
 	fragShader := compileShader(gl.FRAGMENT_SHADER, fragmentSrc)
 
@@ -268,14 +307,9 @@ func NewShader(vertexSrc, fragmentSrc string, attribs []Attr, uniforms []Attr) *
 	gl.DeleteShader(fragShader)
 
 	shader := &Shader{
-		glid:     program,
-		attribs:  attribs,
-		uniforms: uniforms,
-	}
-
-	for i, attr := range attribs {
-		//必须在 LinkProgram 之前
-		gl.BindAttribLocation(program, uint32(i), gl.Str(attr.Name+"\x00"))
+		glid:       program,
+		attributes: make(map[string]uint32),
+		uniforms:   make(map[string]uniformLayout),
 	}
 
 	gl.LinkProgram(program)
@@ -291,18 +325,13 @@ func NewShader(vertexSrc, fragmentSrc string, attribs []Attr, uniforms []Attr) *
 		panic(fmt.Errorf("failed to link program: %v", log))
 	}
 
-	for _, uniform := range uniforms {
-		loc := gl.GetUniformLocation(program, gl.Str(uniform.Name+"\x00"))
-		shader.uniformsLoc = append(shader.uniformsLoc, loc)
-		if uniform.Type == Sampler2D {
-			shader.samplers = append(shader.samplers, loc)
-		}
-	}
+	shader.getAttributes()
+	shader.getUniforms()
 
 	return shader
 }
 
-func (shader *Shader) getAttrib() {
+func (shader *Shader) getAttributes() {
 	program := shader.glid
 
 	var count int32
@@ -317,9 +346,31 @@ func (shader *Shader) getAttrib() {
 	for i := int32(0); i < count; i++ {
 		gl.GetActiveAttrib(program, uint32(i), maxLength, &length, nil, &xtype, &data[0])
 		loc := gl.GetAttribLocation(program, &data[0])
-
 		name := string(data[:length])
-		fmt.Println(name, loc == i, xtype == gl.SAMPLER_2D)
+		shader.attributes[name] = uint32(loc)
+	}
+}
+
+func (shader *Shader) getUniforms() {
+	program := shader.glid
+
+	var count int32
+	gl.GetProgramiv(program, gl.ACTIVE_UNIFORMS, &count)
+
+	var length, maxLength int32
+	gl.GetProgramiv(program, gl.ACTIVE_UNIFORM_MAX_LENGTH, &maxLength)
+
+	data := make([]uint8, maxLength)
+	var xtype uint32
+
+	for i := int32(0); i < count; i++ {
+		gl.GetActiveUniform(program, uint32(i), maxLength, &length, nil, &xtype, &data[0])
+		loc := gl.GetAttribLocation(program, &data[0])
+		name := string(data[:length])
+		shader.uniforms[name] = uniformLayout{loc: loc, xtype: xtype}
+		if xtype == gl.SAMPLER_2D {
+			shader.samplers = append(shader.samplers, loc)
+		}
 	}
 }
 
@@ -331,13 +382,46 @@ func (shader *Shader) Destroy() {
 	gl.DeleteShader(shader.glid)
 }
 
+// Uniform
+func (shader *Shader) SetSampler2D(index, offset int) {
+	//绑定纹理目标
+	gl.Uniform1i(shader.samplers[index], int32(offset)) // gl.TEXTURE0 + offset
+}
+
+func (shader *Shader) SetUniform(name string, v ...float32) {
+	layout, exist := shader.uniforms[name]
+	if !exist {
+		panic("name not exist")
+	}
+	loc := layout.loc
+	switch layout.xtype {
+	case gl.FLOAT:
+		gl.Uniform1f(loc, v[0])
+	case gl.FLOAT_VEC2:
+		gl.Uniform2f(loc, v[0], v[1])
+	case gl.FLOAT_VEC3:
+		gl.Uniform3f(loc, v[0], v[1], v[2])
+	case gl.FLOAT_VEC4:
+		gl.Uniform4f(loc, v[0], v[1], v[2], v[3])
+	case gl.FLOAT_MAT2:
+		gl.UniformMatrix2fv(loc, 1, false, &v[0])
+	case gl.FLOAT_MAT3:
+		gl.UniformMatrix3fv(loc, 1, false, &v[0])
+	case gl.FLOAT_MAT4:
+		gl.UniformMatrix4fv(loc, 1, false, &v[0])
+	default:
+		panic("error uniform type")
+	}
+}
+
 /*
  *	VertexArrayObject
  */
 type VertexArrayObject struct {
-	glid        uint32
-	indexBuffer *Buffer
-	shader      *Shader
+	glid          uint32
+	shader        *Shader
+	indexBuffer   *Buffer
+	vertexBuffers []*Buffer
 
 	dirty bool
 }
@@ -361,6 +445,34 @@ func (vao *VertexArrayObject) SetIndexBuffer(indexBuffer *Buffer) {
 func (vao *VertexArrayObject) SetShader(shader *Shader) {
 	vao.dirty = true
 	vao.shader = shader
+}
+
+func (vao *VertexArrayObject) AddBuffer(buffer *Buffer) {
+	vao.dirty = true
+	vao.vertexBuffers = append(vao.vertexBuffers, buffer)
+}
+
+func (vao *VertexArrayObject) activate() {
+	for _, buffer := range vao.vertexBuffers {
+		buffer.bind()
+		for _, al := range buffer.attrLayouts {
+			loc := vao.shader.attributes[al.name]
+			gl.EnableVertexAttribArray(loc)
+			gl.VertexAttribPointer(loc, al.num, al.xtype, al.normalized, buffer.stride, al.pointer)
+		}
+	}
+}
+
+func (vao *VertexArrayObject) Bind() {
+	gl.BindVertexArray(vao.glid)
+	if vao.dirty {
+		vao.dirty = false
+		vao.activate()
+	}
+}
+
+func (vao *VertexArrayObject) Unbind() {
+	gl.BindVertexArray(0)
 }
 
 func (vao *VertexArrayObject) Draw(mode DrawMode, count, start int) {

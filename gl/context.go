@@ -1,7 +1,7 @@
 package gl
 
 type Context struct {
-	context
+	//context
 }
 
 var theContext *Context
@@ -20,36 +20,19 @@ const (
 type AttrType int
 
 const (
-	Int   AttrType = 0x1404 //gl.INT
+	Uint8 AttrType = 0x1401 //gl.UNSIGNED_BYTE
+	Uin16 AttrType = 0x1403 //gl.UNSIGNED_SHORT
 	Float AttrType = 0x1406 //gl.FLOAT
-
-	Vec2 AttrType = 0x8B50 //gl.FLOAT_VEC2
-	Vec3 AttrType = 0x8B51 //gl.FLOAT_VEC3
-	Vec4 AttrType = 0x8B52 //gl.FLOAT_VEC4
-
-	Mat2 AttrType = 0x8B5A //FLOAT_MAT2
-	Mat3 AttrType = 0x8B5B //FLOAT_MAT3
-	Mat4 AttrType = 0x8B5C //FLOAT_MAT4
-
-	Sampler2D AttrType = 0x8B5E //gl.SAMPLER_2D
 )
 
-func (at AttrType) Size() int {
+func (at AttrType) size() int {
 	switch at {
-	case Int, Float:
+	case Uint8:
+		return 1
+	case Uin16:
+		return 2
+	case Float:
 		return 4
-	case Vec2:
-		return 2 * 4
-	case Vec3:
-		return 3 * 4
-	case Vec4:
-		return 4 * 4
-	case Mat2:
-		return 2 * 2 * 4
-	case Mat3:
-		return 3 * 3 * 4
-	case Mat4:
-		return 4 * 4 * 4
 	default:
 		panic("size of vertex attribute type: invalid type")
 	}
@@ -57,5 +40,8 @@ func (at AttrType) Size() int {
 
 type Attr struct {
 	Name string
+	Num  int
 	Type AttrType
 }
+
+type Attrs []Attr
