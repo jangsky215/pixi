@@ -338,10 +338,9 @@ func (shader *Shader) getAttributes() {
 	gl.GetProgramiv(program, gl.ACTIVE_ATTRIBUTE_MAX_LENGTH, &maxLength)
 
 	data := make([]uint8, maxLength)
-	var xtype uint32
 
 	for i := int32(0); i < count; i++ {
-		gl.GetActiveAttrib(program, uint32(i), maxLength, &length, nil, &xtype, &data[0])
+		gl.GetActiveAttrib(program, uint32(i), maxLength, &length, nil, nil, &data[0])
 		loc := gl.GetAttribLocation(program, &data[0])
 		name := string(data[:length])
 		shader.attributes[name] = loc
@@ -390,7 +389,7 @@ func (shader *Shader) SetSampler2D(index, offset int) {
 	gl.Uniform1i(shader.samplers[index], int32(offset)) // gl.TEXTURE0 + offset
 }
 
-func (shader *Shader) GetUniformLocation(name string) int32 {
+func (shader *Shader) UniformLocation(name string) int32 {
 	return shader.uniforms[name]
 }
 
@@ -507,4 +506,12 @@ func (vao *VertexArrayObject) Draw(mode DrawMode, start, count int) {
 	} else {
 		gl.DrawArrays(uint32(mode), int32(start), int32(count))
 	}
+}
+
+/*
+ *	Util
+ */
+func Clear(r, g, b, a float32) {
+	gl.ClearColor(r, g, b, a)
+	gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
 }

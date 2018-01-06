@@ -3,55 +3,12 @@ package main
 import (
 	"runtime"
 
-	"github.com/go-gl/gl/v3.3-core/gl"
 	glfw "github.com/go-gl/glfw/v3.1/glfw"
 	pixi "github.com/jangsky215/pixi/gl"
 )
 
-func init() {
-	// This is needed to arrange that main() runs on main thread.
-	// See documentation for functions that are only allowed to be called from the main thread.
-	runtime.LockOSThread()
-}
-
-var points = []float32{
-	0.0, 0.5, 0.0,
-	0.5, -0.5, 0.0,
-	-0.5, -0.5, 0.0,
-}
-
-var index = []int16{
-	0, 1, 2,
-}
-
-var vertexShader = `
-#version 410
-
-in vec3 vp;
-in float vp1;
-void main() {
-if(vp1==0){
-
-}
-gl_Position = vec4(vp, 1.0);
-}
-` + "\x00"
-
-var fragmentShader = `
-#version 410
-
-out vec4 frag_colour;
-void main() {
-frag_colour = vec4(0.5, 1.0, 0.5, 1.0);
-}
-` + "\x00"
-
 func main() {
 	runtime.LockOSThread()
-
-	if err := gl.Init(); err != nil {
-		panic(err)
-	}
 
 	if err := glfw.Init(); err != nil {
 		panic(err)
@@ -72,10 +29,10 @@ func main() {
 	}
 
 	window.MakeContextCurrent()
-	gl.ClearColor(1.0, 1.0, 1.0, 1.0)
 
-	gl.Enable(gl.DEPTH_TEST)
-	gl.DepthFunc(gl.LESS)
+	if err := pixi.Init(); err != nil {
+		panic(err)
+	}
 
 	s := pixi.NewShader(vertexShader, fragmentShader)
 	s.Bind()
@@ -94,10 +51,38 @@ func main() {
 	vao.Bind()
 
 	for !window.ShouldClose() {
-		gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
+		pixi.Clear(1, 1, 1, 1)
 		vao.Draw(pixi.DrawTriangle, 0, 3)
 
 		window.SwapBuffers()
 		glfw.PollEvents()
 	}
 }
+
+var points = []float32{
+	0.0, 0.5, 0.0,
+	0.5, -0.5, 0.0,
+	-0.5, -0.5, 0.0,
+}
+
+var index = []int16{
+	0, 1, 2,
+}
+
+var vertexShader = `
+#version 410
+
+in vec3 vp;
+void main() {
+	gl_Position = vec4(vp, 1.0);
+}
+` + "\x00"
+
+var fragmentShader = `
+#version 410
+
+out vec4 frag_colour;
+void main() {
+	frag_colour = vec4(0.5, 1.0, 0.5, 1.0);
+}
+` + "\x00"
