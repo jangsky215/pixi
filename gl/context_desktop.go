@@ -462,9 +462,13 @@ func (vao *VertexArrayObject) activate() {
 	for _, buffer := range vao.vertexBuffers {
 		buffer.bind()
 		for _, al := range buffer.attrLayouts {
-			loc := uint32(vao.attributes[al.name])
-			gl.EnableVertexAttribArray(loc)
-			gl.VertexAttribPointer(loc, al.num, al.xtype, al.normalized, buffer.stride, al.pointer)
+			loc, exist := vao.attributes[al.name]
+			if !exist {
+				panic(fmt.Errorf(`attribute name "%s" not exist`, al.name))
+			}
+			index := uint32(loc)
+			gl.EnableVertexAttribArray(index)
+			gl.VertexAttribPointer(index, al.num, al.xtype, al.normalized, buffer.stride, al.pointer)
 		}
 	}
 
@@ -514,4 +518,8 @@ func (vao *VertexArrayObject) Draw(mode DrawMode, start, count int) {
 func Clear(r, g, b, a float32) {
 	gl.ClearColor(r, g, b, a)
 	gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
+}
+
+func Viewport(x, y, width, height int) {
+	gl.Viewport(int32(x), int32(y), int32(width), int32(height))
 }
