@@ -71,13 +71,10 @@ func NewVertexBuffer(slice interface{}, attrs Attrs) *Buffer {
 			name:       attr.Name,
 			num:        int32(attr.Num),
 			xtype:      uint32(attr.Type),
-			normalized: true,
+			normalized: attr.Type.normalized(),
 			pointer:    unsafe.Pointer(offset),
 		}
 		offset += uintptr(attr.Type.size() * attr.Num)
-		if attr.Type == Float {
-			layout.normalized = false
-		}
 		buffer.attrLayouts[i] = layout
 	}
 	buffer.stride = int32(offset)
@@ -145,6 +142,9 @@ func (tex *Texture) ActiveTexture(i int) {
 }
 
 func (tex *Texture) EnableMipmap() {
+	if tex.mipmap {
+		return
+	}
 	tex.Bind()
 	tex.mipmap = true
 	gl.GenerateMipmap(gl.TEXTURE_2D)

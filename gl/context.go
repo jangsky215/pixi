@@ -38,6 +38,10 @@ func (at AttrType) size() int {
 	}
 }
 
+func (at AttrType) normalized() bool {
+	return at == Float
+}
+
 type Attr struct {
 	Name string
 	Num  int
