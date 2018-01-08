@@ -53,6 +53,10 @@ func (m *Matrix) Scale(x, y float32) {
 }
 
 func (m *Matrix) Rotate(angle float32) {
+	if angle == 0 {
+		return
+	}
+
 	radian := angle * RadianFactor
 	cos := Cos(radian)
 	sin := Sin(radian)
