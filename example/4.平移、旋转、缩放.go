@@ -23,7 +23,8 @@ func main() {
 
 	glfw.WindowHint(glfw.Resizable, glfw.True)
 
-	window, err := glfw.CreateWindow(400, 400, "Tutorial #1", nil, nil)
+	width, height := 800, 600
+	window, err := glfw.CreateWindow(width, height, "Tutorial #1", nil, nil)
 
 	if err != nil {
 		panic(err)
@@ -51,6 +52,7 @@ func main() {
 	vao.SetAttributes(s.Attributes())
 	vao.Bind()
 
+	aspect := float32(width) / float32(height)
 	angle := float32(0)
 	for !window.ShouldClose() {
 		pixi.Clear(1, 1, 1, 1)
@@ -66,6 +68,7 @@ func main() {
 		copy(vertex, points)
 		for i := 0; i < len(vertex); i += 3 {
 			vertex[i], vertex[i+1] = m.Apply(vertex[i], vertex[i+1])
+			vertex[i+1] *= aspect
 		}
 		vertexBuffer.Upload(vertex)
 

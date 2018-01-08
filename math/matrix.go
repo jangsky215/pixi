@@ -6,6 +6,10 @@ type Matrix struct {
 	tx, ty float32
 }
 
+func (m *Matrix) Clone() *Matrix {
+	return &Matrix{m.a, m.b, m.c, m.d, m.tx, m.ty}
+}
+
 func (m *Matrix) ToArray() []float32 {
 	return []float32{
 		m.a, m.b, 0,
@@ -31,11 +35,7 @@ func (m *Matrix) ApplyInverse(x, y float32) (float32, float32) {
 }
 
 func (m *Matrix) Identity() {
-	*m = Matrix{
-		1, 0,
-		0, 1,
-		0, 0,
-	}
+	*m = Matrix{1, 0, 0, 1, 0, 0}
 }
 
 func (m *Matrix) Translate(x, y float32) {
