@@ -52,12 +52,12 @@ func main() {
 	vao.SetAttributes(s.Attributes())
 	vao.Bind()
 
-	aspect := float32(width) / float32(height)
+	aspect := float32(width) / float32(height) // = glheight / glwidth
 	angle := float32(0)
 	for !window.ShouldClose() {
 		pixi.Clear(1, 1, 1, 1)
 
-		angle += 1
+		angle += 0.5
 		m := &math.Matrix{}
 		m.Identity()
 		m.Scale(0.5, 0.5)
