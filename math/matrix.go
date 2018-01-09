@@ -1,5 +1,10 @@
 package math
 
+/*
+ *			    | a  b  0 |
+ *  | x y 1 | · | c  d  0 |
+ *			    | tx ty 1 |
+ */
 type Matrix struct {
 	a, b   float32
 	c, d   float32
@@ -102,4 +107,26 @@ func (m *Matrix) Append(matrix *Matrix) {
 
 	m.tx = (matrix.tx * a) + (matrix.ty * c) + m.tx
 	m.ty = (matrix.tx * b) + (matrix.ty * d) + m.ty
+}
+
+func (m *Matrix) SetTransform(x, y, pivotX, pivotY, scaleX, scaleY, rotation, skewX, skewY float32) {
+	sr := Sin(rotation)
+	cr := Cos(rotation)
+	cy := Cos(skewY)
+	sy := Sin(skewY)
+	nsx := -Sin(skewX)
+	cx := Cos(skewX)
+
+	a := cr * scaleX
+	b := sr * scaleX
+	c := -sr * scaleY
+	d := cr * scaleY
+
+	m.a = cy*a + sy*c
+	m.b = cy*b + sy*d
+	m.c = nsx*a + cx*c
+	m.d = nsx*b + cx*d
+
+	m.tx = x + (pivotX*a + pivotY*c)
+	m.ty = y + (pivotX*b + pivotY*d)
 }

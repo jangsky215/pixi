@@ -7,7 +7,7 @@ const (
 	RadianFactor = math.Pi / 180.0
 )
 
-func sin(radian float32) float32 {
+func _sin(radian float32) float32 {
 	const n = sinTableLen
 	i := uint32(radian * (n / math.Pi))
 	x := i & n
@@ -20,11 +20,11 @@ func sin(radian float32) float32 {
 }
 
 func Cos(radian float32) float32 {
-	return sin(radian + (math.Pi * 0.5))
+	return _sin(radian + (math.Pi * 0.5))
 }
 
 func Sin(radian float32) float32 {
-	return sin(radian)
+	return _sin(radian)
 }
 
 func Tan(radian float32) float32 {
