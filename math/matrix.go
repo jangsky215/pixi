@@ -57,12 +57,11 @@ func (m *Matrix) Scale(x, y float32) {
 	m.ty *= y
 }
 
-func (m *Matrix) Rotate(angle float32) {
-	if angle == 0 {
+func (m *Matrix) Rotate(radian float32) {
+	if radian == 0 {
 		return
 	}
 
-	radian := angle * RadianFactor
 	cos := Cos(radian)
 	sin := Sin(radian)
 
@@ -110,10 +109,6 @@ func (m *Matrix) Append(matrix *Matrix) {
 }
 
 func (m *Matrix) SetTransform(x, y, pivotX, pivotY, scaleX, scaleY, rotation, skewX, skewY float32) {
-	rotation *= RadianFactor
-	skewX *= RadianFactor
-	skewY *= RadianFactor
-
 	sr := Sin(rotation)
 	cr := Cos(rotation)
 	cy := Cos(skewY)

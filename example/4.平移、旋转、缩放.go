@@ -62,7 +62,7 @@ func main() {
 		m.Identity()
 		m.Scale(0.5, 0.5)
 		m.Translate(0.5, 0.5)
-		m.Rotate(angle)
+		m.Rotate(angle * math.RadianFactor)
 
 		vertex := make([]float32, len(points))
 		copy(vertex, points)
