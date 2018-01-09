@@ -110,6 +110,10 @@ func (m *Matrix) Append(matrix *Matrix) {
 }
 
 func (m *Matrix) SetTransform(x, y, pivotX, pivotY, scaleX, scaleY, rotation, skewX, skewY float32) {
+	rotation *= RadianFactor
+	skewX *= RadianFactor
+	skewY *= RadianFactor
+
 	sr := Sin(rotation)
 	cr := Cos(rotation)
 	cy := Cos(skewY)
