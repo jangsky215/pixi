@@ -86,12 +86,12 @@ func (m *Matrix) Skew(skewX, skewY float32) {
 	c := m.c
 	tx := m.tx
 
-	m.a = a + (m.b * tanY)
-	m.b = (a * tanX) + m.b
-	m.c = c + (m.d * tanY)
-	m.d = (c * tanX) + m.d
-	m.tx = tx + (m.ty * tanY)
-	m.ty = (tx * tanX) + m.ty
+	m.a = a + (m.b * tanX)
+	m.b = (a * tanY) + m.b
+	m.c = c + (m.d * tanX)
+	m.d = (c * tanY) + m.d
+	m.tx = tx + (m.ty * tanX)
+	m.ty = (tx * tanY) + m.ty
 
 }
 

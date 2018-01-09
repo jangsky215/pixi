@@ -61,9 +61,9 @@ func main() {
 		m := &math.Matrix{}
 		m.Identity()
 		m.Scale(0.5, 0.5)
-		//m.Translate(0.5, 0.5)
-		//m.Rotate(angle * math.RadianFactor)
-		m.Skew(0*math.RadianFactor, 45*math.RadianFactor)
+		m.Translate(0, 0.5)
+		m.Rotate(angle * math.RadianFactor)
+		//m.Skew(45*math.RadianFactor, 0*math.RadianFactor)
 
 		vertex := make([]float32, len(points))
 		copy(vertex, points)
