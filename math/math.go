@@ -34,3 +34,7 @@ func Tan(radian float32) float32 {
 func Atan(radian float32) float32 {
 	return float32(math.Atan(float64(radian)))
 }
+
+func Atan2(y, x float32) float32 {
+	return float32(math.Atan2(float64(y), float64(x)))
+}
