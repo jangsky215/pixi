@@ -77,6 +77,24 @@ func (m *Matrix) Rotate(radian float32) {
 	m.ty = (tx * sin) + (m.ty * cos)
 }
 
+// 扭曲变形
+func (m *Matrix) Skew(skewX, skewY float32) {
+	tanX := Tan(skewX)
+	tanY := Tan(skewY)
+
+	a := m.a
+	c := m.c
+	tx := m.tx
+
+	m.a = a + (m.b * tanY)
+	m.b = (a * tanX) + m.b
+	m.c = c + (m.d * tanY)
+	m.d = (c * tanX) + m.d
+	m.tx = tx + (m.ty * tanY)
+	m.ty = (tx * tanX) + m.ty
+
+}
+
 func (m *Matrix) Invert() {
 	a := m.a
 	b := m.b
