@@ -77,7 +77,7 @@ func (m *Matrix) Rotate(radian float32) {
 	m.ty = (tx * sin) + (m.ty * cos)
 }
 
-// 扭曲变形
+// 扭曲变形 貌似实现有问题
 func (m *Matrix) Skew(skewX, skewY float32) {
 	tanX := Tan(skewX)
 	tanY := Tan(skewY)

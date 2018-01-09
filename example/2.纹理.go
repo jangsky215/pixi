@@ -57,7 +57,7 @@ func main() {
 	vao.SetAttributes(s.Attributes())
 	vao.Bind()
 
-	img := loadImg("./.resource/square.png")
+	img := loadImg("./.resource/cat.png")
 	tex := pixi.NewTexture()
 	tex.UploadImg(img)
 
@@ -99,7 +99,7 @@ void main()
 {
     gl_Position = vec4(position, 1.0f);
     ourColor = color;
-    TexCoord = texCoord;
+    TexCoord = vec2(texCoord.x, 1.0 - texCoord.y); //OpenGl 纹理坐标与图片坐标y轴时相反的所以这里取反
 }
 `
 
@@ -114,9 +114,9 @@ uniform sampler2D ourTexture;
 
 void main()
 {
-    //color = texture(ourTexture, TexCoord); //显示纹理
+    color = texture(ourTexture, TexCoord); //显示纹理
     //color = vec4(ourColor, 1.0); //显示颜色
-	color = mix(texture(ourTexture, TexCoord), vec4(ourColor, 1.0), 0.5); //混合颜色
+	//color = mix(texture(ourTexture, TexCoord), vec4(ourColor, 1.0), 0.5); //混合颜色
 }
 `
 

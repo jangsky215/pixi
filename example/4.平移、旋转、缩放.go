@@ -6,6 +6,11 @@ import (
 	glfw "github.com/go-gl/glfw/v3.1/glfw"
 	pixi "github.com/jangsky215/pixi/gl"
 	"github.com/jangsky215/pixi/math"
+	"image"
+	"fmt"
+	"os"
+	"image/draw"
+	_ "image/png"
 )
 
 func main() {
@@ -36,21 +41,29 @@ func main() {
 		panic(err)
 	}
 
-	s := pixi.NewShader(vertexShader, fragmentShader)
+	s := pixi.NewShader(vertShader, fragShader)
 	s.Bind()
 
 	vao := pixi.NewVertexArrayObject()
 
 	vertexBuffer := pixi.NewVertexBuffer(nil, pixi.Attrs{
-		{"vp", 3, pixi.Float},
+		{"position", 3, pixi.Float},
+		{"color", 3, pixi.Float},
+		{"texCoord", 2, pixi.Float},
 	})
 	vao.AddBuffer(vertexBuffer)
 
-	indexBuffer := pixi.NewIndexBuffer(index)
+	indexBuffer := pixi.NewIndexBuffer(indices)
 	vao.SetIndexBuffer(indexBuffer)
 
 	vao.SetAttributes(s.Attributes())
 	vao.Bind()
+
+	img := loadImg("./.resource/cat.png")
+	tex := pixi.NewTexture()
+	tex.UploadImg(img)
+
+	s.SetSampler2D(0, 0)
 
 	aspect := float32(width) / float32(height) // = glheight / glwidth
 	angle := float32(0)
@@ -63,47 +76,92 @@ func main() {
 		m.Scale(0.5, 0.5)
 		m.Translate(0, 0.5)
 		m.Rotate(angle * math.RadianFactor)
-		//m.Skew(45*math.RadianFactor, 0*math.RadianFactor)
+		//m.Skew(10*math.RadianFactor, 0*math.RadianFactor)
 
-		vertex := make([]float32, len(points))
-		copy(vertex, points)
-		for i := 0; i < len(vertex); i += 3 {
-			vertex[i], vertex[i+1] = m.Apply(vertex[i], vertex[i+1])
-			vertex[i+1] *= aspect
+		vertex := make([]Vertex, len(vertices))
+		copy(vertex, vertices)
+		for i := 0; i < len(vertex); i++ {
+			vertex[i].X, vertex[i].Y = m.Apply(vertex[i].X, vertex[i].Y)
+			vertex[i].Y *= aspect
 		}
 		vertexBuffer.Upload(vertex)
 
-		vao.Draw(pixi.DrawTriangle, 0, 3)
+		vao.Draw(pixi.DrawTriangle, 0, 6)
 
 		window.SwapBuffers()
 		glfw.PollEvents()
 	}
 }
 
-var points = []float32{
-	0.0, 0.5, 0.0,
-	0.5, 0.0, 0.0,
-	-0.5, 0.0, 0.0,
+
+type Vertex struct {
+	X, Y, Z float32
+	R, G, B float32
+	U, V    float32
 }
 
-var index = []int16{
-	0, 1, 2,
+var vertices = []Vertex{
+	{0.5, 0.5, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0},
+	{0.5, -0.5, 0.0, 0.0, 1.0, 0.0, 1.0, 1.0},
+	{-0.5, -0.5, 0.0, 0.0, 0.0, 1.0, 0.0, 1.0},
+	{-0.5, 0.5, 0.0, 1.0, 1.0, 0.0, 0.0, 0.0},
 }
 
-var vertexShader = `
+var indices = []uint16{
+	0, 1, 3, // 第一个三角形
+	1, 2, 3, // 第二个三角形
+}
+
+var vertShader = `
 #version 410
+in vec3 position;
+in vec3 color;
+in vec2 texCoord;
 
-in vec3 vp;
-void main() {
-	gl_Position = vec4(vp, 1.0);
+out vec3 ourColor;
+out vec2 TexCoord;
+
+void main()
+{
+    gl_Position = vec4(position, 1.0f);
+    ourColor = color;
+    TexCoord = texCoord;
 }
-` + "\x00"
+`
 
-var fragmentShader = `
+var fragShader = `
 #version 410
+in vec3 ourColor;
+in vec2 TexCoord;
 
-out vec4 frag_colour;
-void main() {
-	frag_colour = vec4(0.5, 1.0, 0.5, 1.0);
+out vec4 color;
+
+uniform sampler2D ourTexture;
+
+void main()
+{
+    //color = texture(ourTexture, TexCoord); //显示纹理
+    //color = vec4(ourColor, 1.0); //显示颜色
+	color = mix(texture(ourTexture, TexCoord), vec4(ourColor, 1.0), 0.5); //混合颜色
 }
-` + "\x00"
+`
+
+func loadImg(file string) *image.RGBA {
+	imgFile, err := os.Open(file)
+	if err != nil {
+		panic(fmt.Errorf("texture %q not found on disk: %v", file, err))
+	}
+	img, _, err := image.Decode(imgFile)
+	if err != nil {
+		panic(err)
+	}
+
+	rgba := image.NewRGBA(img.Bounds())
+	if rgba.Stride != rgba.Rect.Size().X*4 {
+		panic(fmt.Errorf("unsupported stride"))
+	}
+	draw.Draw(rgba, rgba.Bounds(), img, image.Point{0, 0}, draw.Src)
+
+	return rgba
+}
+
