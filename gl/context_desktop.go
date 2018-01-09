@@ -178,7 +178,9 @@ func (tex *Texture) Upload(pixels []uint8, width, height int) {
 	}
 	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
 	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
+	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
 
+	gl.PixelStorei(gl.UNPACK_ALIGNMENT, 1)
 	if tex.width != width || tex.height != height {
 		tex.width = width
 		tex.height = height
@@ -522,4 +524,16 @@ func Clear(r, g, b, a float32) {
 
 func Viewport(x, y, width, height int) {
 	gl.Viewport(int32(x), int32(y), int32(width), int32(height))
+}
+
+func Enable(cap CapType) {
+	gl.Enable(uint32(cap))
+}
+
+func Disable(cap CapType) {
+	gl.Disable(uint32(cap))
+}
+
+func BlendFunc(src, dst BlendFormat) {
+	gl.BlendFunc(uint32(src), uint32(dst))
 }

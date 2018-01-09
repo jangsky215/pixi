@@ -3,14 +3,14 @@ package main
 import (
 	"runtime"
 
+	"fmt"
 	glfw "github.com/go-gl/glfw/v3.1/glfw"
 	pixi "github.com/jangsky215/pixi/gl"
 	"github.com/jangsky215/pixi/math"
 	"image"
-	"fmt"
-	"os"
 	"image/draw"
 	_ "image/png"
+	"os"
 )
 
 func main() {
@@ -41,6 +41,10 @@ func main() {
 		panic(err)
 	}
 
+	//混合函数 绘制透明纹理
+	pixi.Enable(pixi.Blend)
+	pixi.BlendFunc(pixi.SrcAlpha, pixi.OneMinusSrcAlpha)
+
 	s := pixi.NewShader(vertShader, fragShader)
 	s.Bind()
 
@@ -70,10 +74,13 @@ func main() {
 	for !window.ShouldClose() {
 		pixi.Clear(1, 1, 1, 1)
 
+		vertexBuffer.Upload(vertices)
+		vao.Draw(pixi.DrawTriangle, 0, 6)
+
 		angle += 0.5
 		m := &math.Matrix{}
 		m.Identity()
-		m.Scale(0.5, 0.5)
+		m.Scale(0.2, 0.2)
 		m.Translate(0, 0.5)
 		m.Rotate(angle * math.RadianFactor)
 		//m.Skew(10*math.RadianFactor, 0*math.RadianFactor)
@@ -92,7 +99,6 @@ func main() {
 		glfw.PollEvents()
 	}
 }
-
 
 type Vertex struct {
 	X, Y, Z float32
@@ -140,9 +146,9 @@ uniform sampler2D ourTexture;
 
 void main()
 {
-    //color = texture(ourTexture, TexCoord); //显示纹理
+    color = texture(ourTexture, TexCoord); //显示纹理
     //color = vec4(ourColor, 1.0); //显示颜色
-	color = mix(texture(ourTexture, TexCoord), vec4(ourColor, 1.0), 0.5); //混合颜色
+	//color = mix(texture(ourTexture, TexCoord), vec4(ourColor, 1.0), 0.5); //混合颜色
 }
 `
 
@@ -164,4 +170,3 @@ func loadImg(file string) *image.RGBA {
 
 	return rgba
 }
-
