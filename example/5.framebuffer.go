@@ -79,12 +79,12 @@ func main() {
 
 		tex.Bind()
 
-		fb.Bind()
-		fb.Clear(1, 0, 0, 1)
 		vertexBuffer.Upload(vertices)
 		vao.Draw(pixi.DrawTriangle, 0, 6)
-		fb.Unbind()
 
+		fb.Clear(1, 0, 0, 1)
+		vao.Draw(pixi.DrawTriangle, 0, 6)
+		fb.Unbind()
 		fb.BindTexture()
 
 		angle += 0.5
@@ -180,4 +180,3 @@ func loadImg(file string) *image.RGBA {
 
 	return rgba
 }
-

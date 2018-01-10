@@ -19,9 +19,11 @@ func Init() error {
 	if err := gl.Init(); err != nil {
 		return err
 	}
-	theContext = &Context{}
+	ctx := &Context{}
 
-	gl.GetIntegerv(gl.FRAMEBUFFER_BINDING, &theContext.screenFramebuffer)
+	gl.GetIntegerv(gl.FRAMEBUFFER_BINDING, &ctx.screenFramebuffer)
+
+	theContext = ctx
 
 	return nil
 }
