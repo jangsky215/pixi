@@ -100,7 +100,7 @@ func (buffer *Buffer) update(drawType uint32, slice interface{}) {
 		panic(errors.New("expected slice"))
 	}
 	size := val.Len() * int(val.Type().Elem().Size())
-	gl.BindBuffer(buffer.gltype, buffer.glid)
+	buffer.bind()
 	if buffer.size >= size {
 		gl.BufferSubData(buffer.gltype, 0, size, gl.Ptr(slice))
 	} else {
@@ -466,7 +466,7 @@ func (vao *VertexArrayObject) activate() {
 		for _, al := range buffer.attrLayouts {
 			loc, exist := vao.attributes[al.name]
 			if !exist {
-				panic(fmt.Errorf(`attribute name "%s" not exist`, al.name))
+				continue
 			}
 			index := uint32(loc)
 			gl.EnableVertexAttribArray(index)
