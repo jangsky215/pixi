@@ -40,11 +40,11 @@ type Buffer struct {
 	gltype uint32
 	size   int
 
-	stride      int32
-	attrLayouts []attrLayout
+	stride  int32
+	layouts []bufferLayout
 }
 
-type attrLayout struct {
+type bufferLayout struct {
 	name       string
 	num        int32
 	xtype      uint32
@@ -68,10 +68,10 @@ func newBuffer(gltype uint32, slice interface{}) *Buffer {
 func NewVertexBuffer(slice interface{}, attrs Attrs) *Buffer {
 	buffer := newBuffer(gl.ARRAY_BUFFER, slice)
 
-	buffer.attrLayouts = make([]attrLayout, len(attrs))
+	buffer.layouts = make([]bufferLayout, len(attrs))
 	offset := uintptr(0)
 	for i, attr := range attrs {
-		layout := attrLayout{
+		layout := bufferLayout{
 			name:       attr.Name,
 			num:        int32(attr.Num),
 			xtype:      uint32(attr.Type),
@@ -79,7 +79,7 @@ func NewVertexBuffer(slice interface{}, attrs Attrs) *Buffer {
 			pointer:    unsafe.Pointer(offset),
 		}
 		offset += uintptr(attr.Type.size() * attr.Num)
-		buffer.attrLayouts[i] = layout
+		buffer.layouts[i] = layout
 	}
 	buffer.stride = int32(offset)
 
@@ -476,7 +476,7 @@ func (vao *VertexArrayObject) AddBuffer(buffer *Buffer) {
 func (vao *VertexArrayObject) activate() {
 	for _, buffer := range vao.vertexBuffers {
 		buffer.bind()
-		for _, al := range buffer.attrLayouts {
+		for _, al := range buffer.layouts {
 			loc, exist := vao.attributes[al.name]
 			if !exist {
 				continue
