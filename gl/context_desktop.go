@@ -86,7 +86,7 @@ func NewVertexBuffer(slice interface{}, attrs Attrs) *Buffer {
 	return buffer
 }
 
-func NewIndexBuffer(slice interface{}) *Buffer {
+func NewIndexBuffer(slice []uint16) *Buffer {
 	return newBuffer(gl.ELEMENT_ARRAY_BUFFER, slice)
 }
 

@@ -65,7 +65,7 @@ var points = []float32{
 	-0.5, -0.5, 0.0,
 }
 
-var index = []int16{
+var index = []uint16{
 	0, 1, 2,
 }
 
