@@ -21,6 +21,8 @@ func Init() error {
 	}
 	theContext = &Context{}
 
+	gl.GetIntegerv(gl.FRAMEBUFFER_BINDING, &theContext.screenFramebuffer)
+
 	return nil
 }
 
@@ -206,11 +208,15 @@ func NewFramebuffer(width, height int) *Framebuffer {
 		height: height,
 		tex:    NewTexture(),
 	}
-	gl.CreateFramebuffers(1, &fb.glid)
+	gl.GenFramebuffers(1, &fb.glid)
 	fb.Bind()
 
 	fb.tex.Upload(nil, width, height)
 	gl.FramebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, fb.tex.glid, 0)
+
+	if gl.CheckFramebufferStatus(gl.FRAMEBUFFER) != gl.FRAMEBUFFER_COMPLETE {
+		panic("init Framebuffer error")
+	}
 
 	return fb
 }
@@ -221,6 +227,10 @@ func (fb *Framebuffer) Destroy() {
 		gl.DeleteFramebuffers(1, &fb.stencil)
 	}
 	fb.tex.Destroy()
+}
+
+func (fb *Framebuffer) BindTexture() {
+	fb.tex.Bind()
 }
 
 func (fb *Framebuffer) EnableStencil() {
@@ -239,7 +249,8 @@ func (fb *Framebuffer) Bind() {
 }
 
 func (fb *Framebuffer) Unbind() {
-	gl.BindFramebuffer(gl.FRAMEBUFFER, 0)
+	glid := uint32(GetContext().screenFramebuffer)
+	gl.BindFramebuffer(gl.FRAMEBUFFER, glid)
 }
 
 func (fb *Framebuffer) Clear(r, g, b, a float32) {

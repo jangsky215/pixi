@@ -1,7 +1,8 @@
 package gl
 
 type Context struct {
-	//context
+	context
+	screenFramebuffer int32 //iOS 默认 Framebuffer 可能不为0
 }
 
 var theContext *Context
