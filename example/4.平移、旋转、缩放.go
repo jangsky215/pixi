@@ -5,7 +5,7 @@ import (
 
 	"fmt"
 	glfw "github.com/go-gl/glfw/v3.1/glfw"
-	pixi "github.com/jangsky215/pixi/gl"
+	"github.com/jangsky215/pixi/gl"
 	"github.com/jangsky215/pixi/math"
 	"image"
 	"image/draw"
@@ -37,34 +37,34 @@ func main() {
 
 	window.MakeContextCurrent()
 
-	if err := pixi.Init(); err != nil {
+	if err := gl.Init(); err != nil {
 		panic(err)
 	}
 
 	//混合函数 绘制透明纹理
-	pixi.Enable(pixi.Blend)
-	pixi.BlendFunc(pixi.SrcAlpha, pixi.OneMinusSrcAlpha)
+	gl.Enable(gl.Blend)
+	gl.BlendFunc(gl.SrcAlpha, gl.OneMinusSrcAlpha)
 
-	s := pixi.NewShader(vertShader, fragShader)
+	s := gl.NewShader(vertShader, fragShader)
 	s.Bind()
 
-	vao := pixi.NewVertexArrayObject()
+	vao := gl.NewVertexArrayObject()
 
-	vertexBuffer := pixi.NewVertexBuffer(nil, pixi.Attrs{
-		{"position", 3, pixi.Float},
-		{"color", 3, pixi.Float},
-		{"texCoord", 2, pixi.Float},
+	vertexBuffer := gl.NewVertexBuffer(nil, gl.Attrs{
+		{"position", 3, gl.Float},
+		{"color", 3, gl.Float},
+		{"texCoord", 2, gl.Float},
 	})
 	vao.AddBuffer(vertexBuffer)
 
-	indexBuffer := pixi.NewIndexBuffer(indices)
+	indexBuffer := gl.NewIndexBuffer(indices)
 	vao.SetIndexBuffer(indexBuffer)
 
 	vao.SetAttributes(s.Attributes())
 	vao.Bind()
 
 	img := loadImg("./.resource/cat.png")
-	tex := pixi.NewTexture()
+	tex := gl.NewTexture()
 	tex.UploadImg(img)
 
 	s.SetSampler2D(0, 0)
@@ -72,10 +72,10 @@ func main() {
 	aspect := float32(width) / float32(height) // = glheight / glwidth
 	angle := float32(0)
 	for !window.ShouldClose() {
-		pixi.Clear(1, 1, 1, 1)
+		gl.Clear(1, 1, 1, 1)
 
 		vertexBuffer.Upload(vertices)
-		vao.Draw(pixi.DrawTriangle, 0, 6)
+		vao.Draw(gl.DrawTriangle, 0, 6)
 
 		angle += 0.5
 		m := &math.Matrix{}
@@ -93,7 +93,7 @@ func main() {
 		}
 		vertexBuffer.Upload(vertex)
 
-		vao.Draw(pixi.DrawTriangle, 0, 6)
+		vao.Draw(gl.DrawTriangle, 0, 6)
 
 		window.SwapBuffers()
 		glfw.PollEvents()
