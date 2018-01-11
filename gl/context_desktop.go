@@ -1,7 +1,9 @@
 package gl
 
 import (
+	"errors"
 	"fmt"
+
 	"image"
 	"image/draw"
 	"reflect"
@@ -9,7 +11,6 @@ import (
 	"unsafe"
 
 	"github.com/go-gl/gl/v3.3-core/gl"
-	"github.com/pkg/errors"
 )
 
 type context struct {
@@ -302,7 +303,7 @@ func compileShader(shaderType uint32, source string) uint32 {
 		log := strings.Repeat("\x00", int(logLength))
 		gl.GetShaderInfoLog(shader, logLength, nil, gl.Str(log))
 
-		panic(errors.Errorf("failed to compile %v: %v", source, log))
+		panic(fmt.Errorf("failed to compile %v: %v", source, log))
 	}
 	return shader
 }
