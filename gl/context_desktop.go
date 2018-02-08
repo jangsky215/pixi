@@ -122,9 +122,8 @@ func (buffer *Buffer) Upload(slice interface{}) {
  *	Texture
  */
 type Texture struct {
-	glid          uint32
-	width, height int
-	mipmap        bool
+	glid   uint32
+	mipmap bool
 }
 
 func NewTexture() *Texture {
@@ -186,13 +185,14 @@ func (tex *Texture) Upload(pixels []uint8, width, height int) {
 	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
 
 	gl.PixelStorei(gl.UNPACK_ALIGNMENT, 1)
-	if tex.width != width || tex.height != height {
-		tex.width = width
-		tex.height = height
-		gl.TexImage2D(gl.TEXTURE_2D, 0, gl.RGBA, int32(width), int32(height), 0, gl.RGBA, gl.UNSIGNED_BYTE, ptr)
-	} else {
-		gl.TexSubImage2D(gl.TEXTURE_2D, 0, 0, 0, int32(width), int32(height), gl.RGBA, gl.UNSIGNED_BYTE, ptr)
-	}
+	gl.TexImage2D(gl.TEXTURE_2D, 0, gl.RGBA, int32(width), int32(height), 0, gl.RGBA, gl.UNSIGNED_BYTE, ptr)
+}
+
+func (tex *Texture) SubUpload(pixels []uint8, x, y, width, height int) {
+	tex.Bind()
+	gl.PixelStorei(gl.UNPACK_ALIGNMENT, 1)
+	gl.TexSubImage2D(gl.TEXTURE_2D, 0, int32(x), int32(y), int32(width), int32(height),
+		gl.RGBA, gl.UNSIGNED_BYTE, gl.Ptr(pixels))
 }
 
 /*
