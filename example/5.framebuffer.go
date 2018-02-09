@@ -92,7 +92,7 @@ func main() {
 		m.Identity()
 		m.Scale(0.2, 0.2)
 		m.Translate(0, 0.5)
-		m.Rotate(angle * math.RadianFactor)
+		m.Rotate(angle * math.Pi / 180)
 		//m.Skew(10*math.RadianFactor, 0*math.RadianFactor)
 
 		vertex := make([]Vertex, len(vertices))

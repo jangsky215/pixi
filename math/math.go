@@ -3,8 +3,7 @@ package math
 import "math"
 
 const (
-	//弧度因子
-	RadianFactor = math.Pi / 180.0
+	Pi = math.Pi
 )
 
 func _sin(radian float32) float32 {
