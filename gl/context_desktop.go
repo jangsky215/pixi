@@ -39,18 +39,8 @@ func (c *context) callNonBlock(f func()) {
 type Buffer struct {
 	glid   uint32
 	gltype uint32
-	size   int
 
-	stride  int32
-	layouts []bufferLayout
-}
-
-type bufferLayout struct {
-	name       string
-	num        int32
-	xtype      uint32
-	normalized bool
-	pointer    unsafe.Pointer
+	stride int32
 }
 
 func newBuffer(gltype uint32, slice interface{}) *Buffer {
@@ -66,23 +56,9 @@ func newBuffer(gltype uint32, slice interface{}) *Buffer {
 	return buffer
 }
 
-func NewVertexBuffer(slice interface{}, attrs Attrs) *Buffer {
+func NewVertexBuffer(slice interface{}, stride int32) *Buffer {
 	buffer := newBuffer(gl.ARRAY_BUFFER, slice)
-
-	buffer.layouts = make([]bufferLayout, len(attrs))
-	offset := uintptr(0)
-	for i, attr := range attrs {
-		layout := bufferLayout{
-			name:       attr.Name,
-			num:        int32(attr.Num),
-			xtype:      uint32(attr.Type),
-			normalized: attr.Type.normalized(),
-			pointer:    unsafe.Pointer(offset),
-		}
-		offset += uintptr(attr.Type.size() * attr.Num)
-		buffer.layouts[i] = layout
-	}
-	buffer.stride = int32(offset)
+	buffer.stride = stride
 
 	return buffer
 }
@@ -105,13 +81,9 @@ func (buffer *Buffer) update(drawType uint32, slice interface{}) {
 		panic(errors.New("expected slice"))
 	}
 	size := val.Len() * int(val.Type().Elem().Size())
+	gl.BindVertexArray(0)
 	buffer.bind()
-	if buffer.size >= size {
-		gl.BufferSubData(buffer.gltype, 0, size, gl.Ptr(slice))
-	} else {
-		buffer.size = size
-		gl.BufferData(buffer.gltype, size, gl.Ptr(slice), drawType)
-	}
+	gl.BufferData(buffer.gltype, size, gl.Ptr(slice), drawType)
 }
 
 func (buffer *Buffer) Upload(slice interface{}) {
@@ -154,7 +126,7 @@ func (tex *Texture) EnableMipmap() {
 	gl.GenerateMipmap(gl.TEXTURE_2D)
 }
 
-func (tex *Texture) UploadImg(img image.Image) {
+func (tex *Texture) UploadImage(img image.Image) {
 	var rgba *image.RGBA
 	if t, ok := img.(*image.RGBA); ok {
 		rgba = t
@@ -232,8 +204,8 @@ func (fb *Framebuffer) Destroy() {
 	fb.tex.Destroy()
 }
 
-func (fb *Framebuffer) BindTexture() {
-	fb.tex.Bind()
+func (fb *Framebuffer) Texture() *Texture {
+	return fb.tex
 }
 
 func (fb *Framebuffer) EnableStencil() {
@@ -279,12 +251,24 @@ func (fb *Framebuffer) Resize(width, height int) {
  */
 type Shader struct {
 	glid       uint32
-	attributes Attributes
-	uniforms   Attributes
+	glvao      uint32
+	attributes map[string]int32
+	uniforms   map[string]int32
 	samplers   []int32
+
+	attrLayouts  []layout
+	bufferDirty  bool
+	vertexBuffer *Buffer
+	indexBuffer  *Buffer
 }
 
-type Attributes map[string]int32
+type layout struct {
+	loc        uint32
+	num        int32
+	xtype      uint32
+	normalized bool
+	pointer    unsafe.Pointer
+}
 
 func compileShader(shaderType uint32, source string) uint32 {
 	shader := gl.CreateShader(shaderType)
@@ -308,24 +292,41 @@ func compileShader(shaderType uint32, source string) uint32 {
 	return shader
 }
 
-func NewShader(vertexSrc, fragmentSrc string) *Shader {
+func NewShader(vertexSrc, fragmentSrc string, attrs Attrs) *Shader {
 	vertShader := compileShader(gl.VERTEX_SHADER, vertexSrc)
 	fragShader := compileShader(gl.FRAGMENT_SHADER, fragmentSrc)
 
 	program := gl.CreateProgram()
-	gl.AttachShader(program, vertShader)
-	gl.AttachShader(program, fragShader)
+	shader := &Shader{
+		glid:        program,
+		attributes:  make(map[string]int32),
+		uniforms:    make(map[string]int32),
+		attrLayouts: make([]layout, len(attrs)),
+	}
+	gl.GenVertexArrays(1, &shader.glvao)
 
+	gl.AttachShader(program, vertShader)
 	gl.DeleteShader(vertShader)
+	gl.AttachShader(program, fragShader)
 	gl.DeleteShader(fragShader)
 
-	shader := &Shader{
-		glid:       program,
-		attributes: make(Attributes),
-		uniforms:   make(Attributes),
+	offset := uintptr(0)
+	for i, attr := range attrs {
+		gl.BindAttribLocation(program, uint32(i), gl.Str(attr.Name+"\x00"))
+		layout := layout{
+			loc:        uint32(i),
+			num:        int32(attr.Num),
+			xtype:      uint32(attr.Type),
+			normalized: attr.Type.normalized(),
+			pointer:    unsafe.Pointer(offset),
+		}
+		offset += uintptr(attr.Type.size() * attr.Num)
+		shader.attrLayouts[i] = layout
 	}
 
+	//BindAttribLocation 必须放在 LinkProgram 之前
 	gl.LinkProgram(program)
+
 	var status int32
 	gl.GetProgramiv(program, gl.LINK_STATUS, &status)
 	if status == gl.FALSE {
@@ -384,25 +385,58 @@ func (shader *Shader) getUniforms() {
 			shader.samplers = append(shader.samplers, loc)
 		}
 	}
+	if len(shader.samplers) == 1 {
+		shader.samplers = nil
+	}
+}
+
+func (shader *Shader) SetVertexBuffer(vertexBuffer *Buffer) {
+	if shader.vertexBuffer != vertexBuffer {
+		shader.bufferDirty = true
+		shader.vertexBuffer = vertexBuffer
+	}
+}
+
+func (shader *Shader) SetIndexBuffer(indexBuffer *Buffer) {
+	if shader.indexBuffer != indexBuffer {
+		shader.bufferDirty = true
+		shader.indexBuffer = indexBuffer
+	}
 }
 
 func (shader *Shader) Bind() {
 	gl.UseProgram(shader.glid)
+	gl.BindVertexArray(shader.glvao)
+	if shader.bufferDirty {
+		shader.bufferDirty = false
+		shader.activate()
+	}
+}
+
+func (shader *Shader) activate() {
+	shader.vertexBuffer.bind()
+	for _, al := range shader.attrLayouts {
+		gl.EnableVertexAttribArray(al.loc)
+		gl.VertexAttribPointer(al.loc, al.num, al.xtype, al.normalized, shader.vertexBuffer.stride, al.pointer)
+	}
+	shader.indexBuffer.bind()
+}
+
+func (shader *Shader) Draw(mode DrawMode, start, count int) {
+	gl.DrawElements(uint32(mode), int32(count), gl.UNSIGNED_SHORT, unsafe.Pointer(uintptr(start)))
 }
 
 func (shader *Shader) Destroy() {
 	gl.DeleteShader(shader.glid)
-}
-
-// Attrib
-func (shader *Shader) Attributes() Attributes {
-	return shader.attributes
+	gl.DeleteVertexArrays(1, &shader.glvao)
 }
 
 // Uniform
-func (shader *Shader) SetSampler2D(index, offset int) {
+func (shader *Shader) SetSampler2D(offset int) {
 	//绑定纹理目标
-	gl.Uniform1i(shader.samplers[index], int32(offset)) // gl.TEXTURE0 + offset
+	if offset < len(shader.samplers) {
+		gl.Uniform1i(shader.samplers[offset], int32(offset)) // gl.TEXTURE0 + offset
+	}
 }
 
 func (shader *Shader) UniformLocation(name string) int32 {
@@ -433,98 +467,6 @@ func (shader *Shader) SetUniform(loc int32, v ...float32) {
 		gl.UniformMatrix4fv(loc, 1, false, &v[0])
 	default:
 		panic("error uniform type")
-	}
-}
-
-/*
- *	VertexArrayObject
- */
-type VertexArrayObject struct {
-	glid          uint32
-	attributes    Attributes
-	indexBuffer   *Buffer
-	vertexBuffers []*Buffer
-
-	dirty bool
-}
-
-func NewVertexArrayObject() *VertexArrayObject {
-	vao := &VertexArrayObject{}
-	gl.GenVertexArrays(1, &vao.glid)
-
-	return vao
-}
-
-func (vao *VertexArrayObject) Destroy() {
-	gl.DeleteVertexArrays(1, &vao.glid)
-}
-
-func (vao *VertexArrayObject) SetIndexBuffer(indexBuffer *Buffer) {
-	vao.dirty = true
-	vao.indexBuffer = indexBuffer
-}
-
-func (vao *VertexArrayObject) SetAttributes(attributes Attributes) {
-	vao.dirty = true
-	vao.attributes = attributes
-}
-
-func (vao *VertexArrayObject) AddBuffer(buffer *Buffer) {
-	vao.dirty = true
-	vao.vertexBuffers = append(vao.vertexBuffers, buffer)
-}
-
-func (vao *VertexArrayObject) activate() {
-	for _, buffer := range vao.vertexBuffers {
-		buffer.bind()
-		for _, al := range buffer.layouts {
-			loc, exist := vao.attributes[al.name]
-			if !exist {
-				continue
-			}
-			index := uint32(loc)
-			gl.EnableVertexAttribArray(index)
-			gl.VertexAttribPointer(index, al.num, al.xtype, al.normalized, buffer.stride, al.pointer)
-		}
-	}
-
-	if vao.indexBuffer != nil {
-		vao.indexBuffer.bind()
-	}
-}
-
-func (vao *VertexArrayObject) Bind() {
-	gl.BindVertexArray(vao.glid)
-	if vao.dirty {
-		vao.dirty = false
-		vao.activate()
-	}
-}
-
-func (vao *VertexArrayObject) Unbind() {
-	gl.BindVertexArray(0)
-}
-
-func (vao *VertexArrayObject) Clear() {
-	vao.dirty = true
-	vao.indexBuffer = nil
-	vao.vertexBuffers = nil
-	vao.attributes = nil
-}
-
-func (vao *VertexArrayObject) IndexBuffer() *Buffer {
-	return vao.indexBuffer
-}
-
-func (vao *VertexArrayObject) VertexBuffers() []*Buffer {
-	return vao.vertexBuffers
-}
-
-func (vao *VertexArrayObject) Draw(mode DrawMode, start, count int) {
-	if vao.indexBuffer != nil {
-		gl.DrawElements(uint32(mode), int32(count), gl.UNSIGNED_SHORT, unsafe.Pointer(uintptr(start)))
-	} else {
-		gl.DrawArrays(uint32(mode), int32(start), int32(count))
 	}
 }
 

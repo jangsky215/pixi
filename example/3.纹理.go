@@ -4,7 +4,7 @@ import (
 	"runtime"
 
 	"fmt"
-	glfw "github.com/go-gl/glfw/v3.1/glfw"
+	"github.com/go-gl/glfw/v3.1/glfw"
 	"github.com/jangsky215/pixi/gl"
 	"image"
 	"image/draw"
@@ -39,34 +39,28 @@ func main() {
 		panic(err)
 	}
 
-	s := gl.NewShader(vertShader, fragShader)
-	s.Bind()
-
-	vao := gl.NewVertexArrayObject()
-
-	vertexBuffer := gl.NewVertexBuffer(vertices, gl.Attrs{
+	s := gl.NewShader(vertShader, fragShader, gl.Attrs{
 		{"position", 3, gl.Float},
 		{"color", 3, gl.Float},
 		{"texCoord", 2, gl.Float},
 	})
-	vao.AddBuffer(vertexBuffer)
+
+	vertexBuffer := gl.NewVertexBuffer(vertices, 8*4)
+	s.SetVertexBuffer(vertexBuffer)
 
 	indexBuffer := gl.NewIndexBuffer(indices)
-	vao.SetIndexBuffer(indexBuffer)
+	s.SetIndexBuffer(indexBuffer)
+	s.Bind()
 
-	vao.SetAttributes(s.Attributes())
-	vao.Bind()
-
-	img := loadImg("./.resource/square.png")
+	img := loadImg("./.resource/cat.png")
 	tex := gl.NewTexture()
-	tex.UploadImg(img)
+	tex.UploadImage(img)
 
-	fmt.Println(s)
-	s.SetSampler2D(0, 0)
+	s.SetSampler2D(0)
 
 	for !window.ShouldClose() {
 		gl.Clear(1, 1, 1, 1)
-		vao.Draw(gl.DrawTriangle, 0, 6)
+		s.Draw(gl.DrawTriangle, 0, 6)
 
 		window.SwapBuffers()
 		glfw.PollEvents()

@@ -4,7 +4,7 @@ import (
 	"runtime"
 
 	"fmt"
-	glfw "github.com/go-gl/glfw/v3.1/glfw"
+	"github.com/go-gl/glfw/v3.1/glfw"
 	"github.com/jangsky215/pixi/gl"
 	"github.com/jangsky215/pixi/math"
 	"image"
@@ -45,29 +45,25 @@ func main() {
 	gl.Enable(gl.Blend)
 	gl.BlendFunc(gl.SrcAlpha, gl.OneMinusSrcAlpha)
 
-	s := gl.NewShader(vertShader, fragShader)
-	s.Bind()
-
-	vao := gl.NewVertexArrayObject()
-
-	vertexBuffer := gl.NewVertexBuffer(nil, gl.Attrs{
+	attrs := gl.Attrs{
 		{"position", 3, gl.Float},
 		{"color", 3, gl.Float},
 		{"texCoord", 2, gl.Float},
-	})
-	vao.AddBuffer(vertexBuffer)
+	}
+
+	s := gl.NewShader(vertShader, fragShader, attrs)
+
+	vertexBuffer := gl.NewVertexBuffer(nil, 8*4)
+	s.SetVertexBuffer(vertexBuffer)
 
 	indexBuffer := gl.NewIndexBuffer(indices)
-	vao.SetIndexBuffer(indexBuffer)
-
-	vao.SetAttributes(s.Attributes())
-	vao.Bind()
+	s.SetIndexBuffer(indexBuffer)
 
 	img := loadImg("./.resource/cat.png")
 	tex := gl.NewTexture()
-	tex.UploadImg(img)
+	tex.UploadImage(img)
 
-	s.SetSampler2D(0, 0)
+	s.SetSampler2D(0)
 
 	aspect := float32(width) / float32(height) // = glheight / glwidth
 	angle := float32(0)
@@ -75,7 +71,8 @@ func main() {
 		gl.Clear(1, 1, 1, 1)
 
 		vertexBuffer.Upload(vertices)
-		vao.Draw(gl.DrawTriangle, 0, 6)
+		s.Bind()
+		s.Draw(gl.DrawTriangle, 0, 6)
 
 		angle += 0.5
 		m := &math.Matrix{}
@@ -93,7 +90,8 @@ func main() {
 		}
 		vertexBuffer.Upload(vertex)
 
-		vao.Draw(gl.DrawTriangle, 0, 6)
+		s.Bind()
+		s.Draw(gl.DrawTriangle, 0, 6)
 
 		window.SwapBuffers()
 		glfw.PollEvents()

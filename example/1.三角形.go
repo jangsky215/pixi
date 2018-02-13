@@ -34,25 +34,21 @@ func main() {
 		panic(err)
 	}
 
-	s := gl.NewShader(vertexShader, fragmentShader)
-	s.Bind()
-
-	vao := gl.NewVertexArrayObject()
-
-	vertexBuffer := gl.NewVertexBuffer(points, gl.Attrs{
+	s := gl.NewShader(vertexShader, fragmentShader, gl.Attrs{
 		{"vp", 3, gl.Float},
 	})
-	vao.AddBuffer(vertexBuffer)
+	s.Bind()
+
+	vertexBuffer := gl.NewVertexBuffer(points, 3*4)
+	s.SetVertexBuffer(vertexBuffer)
 
 	indexBuffer := gl.NewIndexBuffer(index)
-	vao.SetIndexBuffer(indexBuffer)
-
-	vao.SetAttributes(s.Attributes())
-	vao.Bind()
+	s.SetIndexBuffer(indexBuffer)
+	s.Bind()
 
 	for !window.ShouldClose() {
 		gl.Clear(1, 1, 1, 1)
-		vao.Draw(gl.DrawTriangle, 0, 3)
+		s.Draw(gl.DrawTriangle, 0, 3)
 
 		window.SwapBuffers()
 		glfw.PollEvents()

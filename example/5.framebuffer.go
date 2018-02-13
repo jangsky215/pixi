@@ -4,7 +4,7 @@ import (
 	"runtime"
 
 	"fmt"
-	glfw "github.com/go-gl/glfw/v3.1/glfw"
+	"github.com/go-gl/glfw/v3.1/glfw"
 	"github.com/jangsky215/pixi/gl"
 	"github.com/jangsky215/pixi/math"
 	"image"
@@ -45,29 +45,24 @@ func main() {
 	gl.Enable(gl.Blend)
 	gl.BlendFunc(gl.SrcAlpha, gl.OneMinusSrcAlpha)
 
-	s := gl.NewShader(vertShader, fragShader)
-	s.Bind()
-
-	vao := gl.NewVertexArrayObject()
-
-	vertexBuffer := gl.NewVertexBuffer(nil, gl.Attrs{
+	s := gl.NewShader(vertShader, fragShader, gl.Attrs{
 		{"position", 3, gl.Float},
 		{"color", 3, gl.Float},
 		{"texCoord", 2, gl.Float},
 	})
-	vao.AddBuffer(vertexBuffer)
+
+	vertexBuffer := gl.NewVertexBuffer(nil, 8*4)
+	s.SetVertexBuffer(vertexBuffer)
 
 	indexBuffer := gl.NewIndexBuffer(indices)
-	vao.SetIndexBuffer(indexBuffer)
-
-	vao.SetAttributes(s.Attributes())
-	vao.Bind()
+	s.SetIndexBuffer(indexBuffer)
+	s.Bind()
 
 	img := loadImg("./.resource/cat.png")
 	tex := gl.NewTexture()
-	tex.UploadImg(img)
+	tex.UploadImage(img)
 
-	s.SetSampler2D(0, 0)
+	s.SetSampler2D(0)
 
 	fb := gl.NewFramebuffer(width/2, height)
 	fb.Unbind()
@@ -80,12 +75,14 @@ func main() {
 		tex.Bind()
 
 		vertexBuffer.Upload(vertices)
-		vao.Draw(gl.DrawTriangle, 0, 6)
+		s.Bind()
+		s.Draw(gl.DrawTriangle, 0, 6)
 
 		fb.Clear(1, 0, 0, 1)
-		vao.Draw(gl.DrawTriangle, 0, 6)
+		s.Bind()
+		s.Draw(gl.DrawTriangle, 0, 6)
 		fb.Unbind()
-		fb.BindTexture()
+		fb.Texture().Bind()
 
 		angle += 0.5
 		m := &math.Matrix{}
@@ -103,7 +100,8 @@ func main() {
 		}
 		vertexBuffer.Upload(vertex)
 
-		vao.Draw(gl.DrawTriangle, 0, 6)
+		s.Bind()
+		s.Draw(gl.DrawTriangle, 0, 6)
 
 		window.SwapBuffers()
 		glfw.PollEvents()
