@@ -62,8 +62,6 @@ func main() {
 	tex := gl.NewTexture()
 	tex.UploadImage(img)
 
-	s.SetSampler2D(0)
-
 	fb := gl.NewFramebuffer(width/2, height)
 	fb.Unbind()
 

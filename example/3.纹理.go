@@ -10,6 +10,7 @@ import (
 	"image/draw"
 	_ "image/png"
 	"os"
+	"time"
 )
 
 func main() {
@@ -39,28 +40,45 @@ func main() {
 		panic(err)
 	}
 
-	s := gl.NewShader(vertShader, fragShader, gl.Attrs{
+	//混合函数 绘制透明纹理
+	gl.Enable(gl.Blend)
+	gl.BlendFunc(gl.SrcAlpha, gl.OneMinusSrcAlpha)
+
+	attrs := gl.Attrs{
 		{"position", 3, gl.Float},
 		{"color", 3, gl.Float},
 		{"texCoord", 2, gl.Float},
-	})
+	}
 
 	vertexBuffer := gl.NewVertexBuffer(vertices, 8*4)
-	s.SetVertexBuffer(vertexBuffer)
-
 	indexBuffer := gl.NewIndexBuffer(indices)
+
+	s := gl.NewShader(vertShader, fragShader, attrs)
+	s.SetVertexBuffer(vertexBuffer)
 	s.SetIndexBuffer(indexBuffer)
 	s.Bind()
+
+	normalS := gl.NewShader(normalVertShader, normalFragShader, attrs)
+	normalS.SetVertexBuffer(vertexBuffer)
+	normalS.SetIndexBuffer(indexBuffer)
+	normalS.Bind()
 
 	img := loadImg("./.resource/cat.png")
 	tex := gl.NewTexture()
 	tex.UploadImage(img)
 
-	s.SetSampler2D(0)
+	last := time.Now().Unix()
 
 	for !window.ShouldClose() {
 		gl.Clear(1, 1, 1, 1)
-		s.Draw(gl.DrawTriangle, 0, 6)
+
+		if ((time.Now().Unix()-last)/5)%2 == 1 {
+			s.Bind()
+			s.Draw(gl.DrawTriangle, 0, 6)
+		} else {
+			normalS.Bind()
+			normalS.Draw(gl.DrawTriangle, 0, 6)
+		}
 
 		window.SwapBuffers()
 		glfw.PollEvents()
@@ -84,6 +102,39 @@ var indices = []uint16{
 	0, 1, 3, // 第一个三角形
 	1, 2, 3, // 第二个三角形
 }
+var normalVertShader = `
+#version 410
+in vec3 position;
+in vec3 color;
+in vec2 texCoord;
+
+out vec3 ourColor;
+out vec2 TexCoord;
+
+void main()
+{
+    gl_Position = vec4(position, 1.0f);
+    ourColor = color;
+    TexCoord = vec2(texCoord.x, 1.0 - texCoord.y); //OpenGl 纹理坐标与图片坐标y轴时相反的所以这里取反
+}
+`
+
+var normalFragShader = `
+#version 410
+in vec3 ourColor;
+in vec2 TexCoord;
+
+out vec4 color;
+
+uniform sampler2D ourTexture;
+
+void main()
+{
+    color = texture(ourTexture, TexCoord); //显示纹理
+    //color = vec4(ourColor, 1.0); //显示颜色
+	//color = mix(texture(ourTexture, TexCoord), vec4(ourColor, 1.0), 0.5); //混合颜色
+}
+`
 
 var vertShader = `
 #version 410
@@ -113,9 +164,13 @@ uniform sampler2D ourTexture;
 
 void main()
 {
-    //color = texture(ourTexture, TexCoord); //显示纹理
+    color = texture(ourTexture, TexCoord); //显示纹理
     //color = vec4(ourColor, 1.0); //显示颜色
-	color = mix(texture(ourTexture, TexCoord), vec4(ourColor, 1.0), 0.5); //混合颜色
+	if(color.a > 0.5){
+		color = mix(color, vec4(ourColor, 1.0), 0.5); //混合颜色
+	} 
+	//else
+	//	color.a = 0;
 }
 `
 

@@ -63,8 +63,6 @@ func main() {
 	tex := gl.NewTexture()
 	tex.UploadImage(img)
 
-	s.SetSampler2D(0)
-
 	aspect := float32(width) / float32(height) // = glheight / glwidth
 	angle := float32(0)
 	for !window.ShouldClose() {

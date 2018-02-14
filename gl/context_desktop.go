@@ -250,13 +250,13 @@ func (fb *Framebuffer) Resize(width, height int) {
  *	Shader
  */
 type Shader struct {
-	glid       uint32
-	glvao      uint32
-	attributes map[string]int32
-	uniforms   map[string]int32
-	samplers   []int32
+	glid            uint32
+	glvao           uint32
+	attributes      map[string]int32
+	uniforms        map[string]int32
+	textureUniforms []int32
 
-	attrLayouts  []layout
+	attribLayout []layout
 	bufferDirty  bool
 	vertexBuffer *Buffer
 	indexBuffer  *Buffer
@@ -298,10 +298,10 @@ func NewShader(vertexSrc, fragmentSrc string, attrs Attrs) *Shader {
 
 	program := gl.CreateProgram()
 	shader := &Shader{
-		glid:        program,
-		attributes:  make(map[string]int32),
-		uniforms:    make(map[string]int32),
-		attrLayouts: make([]layout, len(attrs)),
+		glid:         program,
+		attributes:   make(map[string]int32),
+		uniforms:     make(map[string]int32),
+		attribLayout: make([]layout, len(attrs)),
 	}
 	gl.GenVertexArrays(1, &shader.glvao)
 
@@ -321,7 +321,7 @@ func NewShader(vertexSrc, fragmentSrc string, attrs Attrs) *Shader {
 			pointer:    unsafe.Pointer(offset),
 		}
 		offset += uintptr(attr.Type.size() * attr.Num)
-		shader.attrLayouts[i] = layout
+		shader.attribLayout[i] = layout
 	}
 
 	//BindAttribLocation 必须放在 LinkProgram 之前
@@ -382,11 +382,11 @@ func (shader *Shader) getUniforms() {
 		name := string(data[:length])
 		shader.uniforms[name] = loc
 		if xtype == gl.SAMPLER_2D {
-			shader.samplers = append(shader.samplers, loc)
+			shader.textureUniforms = append(shader.textureUniforms, loc)
 		}
 	}
-	if len(shader.samplers) == 1 {
-		shader.samplers = nil
+	if len(shader.textureUniforms) == 1 {
+		shader.textureUniforms = nil
 	}
 }
 
@@ -397,6 +397,10 @@ func (shader *Shader) SetVertexBuffer(vertexBuffer *Buffer) {
 	}
 }
 
+func (shader *Shader) VertexBuffer() *Buffer {
+	return shader.vertexBuffer
+}
+
 func (shader *Shader) SetIndexBuffer(indexBuffer *Buffer) {
 	if shader.indexBuffer != indexBuffer {
 		shader.bufferDirty = true
@@ -404,22 +408,27 @@ func (shader *Shader) SetIndexBuffer(indexBuffer *Buffer) {
 	}
 }
 
+func (shader *Shader) IndexBuffer() *Buffer {
+	return shader.indexBuffer
+}
+
 func (shader *Shader) Bind() {
 	gl.UseProgram(shader.glid)
+	shader.applyTextureUniform()
+	shader.applyBuffer()
+}
+
+func (shader *Shader) applyBuffer() {
 	gl.BindVertexArray(shader.glvao)
 	if shader.bufferDirty {
 		shader.bufferDirty = false
-		shader.activate()
+		shader.vertexBuffer.bind()
+		for _, al := range shader.attribLayout {
+			gl.EnableVertexAttribArray(al.loc)
+			gl.VertexAttribPointer(al.loc, al.num, al.xtype, al.normalized, shader.vertexBuffer.stride, al.pointer)
+		}
+		shader.indexBuffer.bind()
 	}
-}
-
-func (shader *Shader) activate() {
-	shader.vertexBuffer.bind()
-	for _, al := range shader.attrLayouts {
-		gl.EnableVertexAttribArray(al.loc)
-		gl.VertexAttribPointer(al.loc, al.num, al.xtype, al.normalized, shader.vertexBuffer.stride, al.pointer)
-	}
-	shader.indexBuffer.bind()
 }
 
 func (shader *Shader) Draw(mode DrawMode, start, count int) {
@@ -432,10 +441,10 @@ func (shader *Shader) Destroy() {
 }
 
 // Uniform
-func (shader *Shader) SetSampler2D(offset int) {
+func (shader *Shader) applyTextureUniform() {
 	//绑定纹理目标
-	if offset < len(shader.samplers) {
-		gl.Uniform1i(shader.samplers[offset], int32(offset)) // gl.TEXTURE0 + offset
+	for i, loc := range shader.textureUniforms {
+		gl.Uniform1i(int32(loc), int32(i))
 	}
 }
 

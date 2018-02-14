@@ -56,8 +56,6 @@ func main() {
 	tex := gl.NewTexture()
 	tex.UploadImage(img)
 
-	s.SetSampler2D(0)
-
 	for !window.ShouldClose() {
 		gl.Clear(1, 1, 1, 1)
 		s.Draw(gl.DrawTriangle, 0, 6)
