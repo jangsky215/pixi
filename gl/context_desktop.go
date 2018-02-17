@@ -43,9 +43,10 @@ type Buffer struct {
 	stride int32
 }
 
-func newBuffer(gltype uint32, slice interface{}) *Buffer {
+func newBuffer(gltype uint32, slice interface{}, stride int32) *Buffer {
 	buffer := &Buffer{
 		gltype: gltype,
+		stride: stride,
 	}
 	gl.GenBuffers(1, &buffer.glid)
 
@@ -57,14 +58,11 @@ func newBuffer(gltype uint32, slice interface{}) *Buffer {
 }
 
 func NewVertexBuffer(slice interface{}, stride int32) *Buffer {
-	buffer := newBuffer(gl.ARRAY_BUFFER, slice)
-	buffer.stride = stride
-
-	return buffer
+	return newBuffer(gl.ARRAY_BUFFER, slice, stride)
 }
 
 func NewIndexBuffer(slice []uint16) *Buffer {
-	return newBuffer(gl.ELEMENT_ARRAY_BUFFER, slice)
+	return newBuffer(gl.ELEMENT_ARRAY_BUFFER, slice, 0)
 }
 
 func (buffer *Buffer) Destroy() {
