@@ -4,12 +4,13 @@ import (
 	"runtime"
 
 	"fmt"
-	"github.com/go-gl/glfw/v3.1/glfw"
-	"github.com/jangsky215/pixi/gl"
 	"image"
 	"image/draw"
 	_ "image/png"
 	"os"
+
+	"github.com/go-gl/glfw/v3.1/glfw"
+	gl "github.com/jangsky215/pixi/internal"
 )
 
 func main() {
@@ -39,6 +40,9 @@ func main() {
 		panic(err)
 	}
 
+	//混合函数 绘制透明纹理
+	gl.SetBlend(gl.BlendSrcAlpha, gl.BlendOneMinusSrcAlpha)
+
 	s := gl.NewShader(vertShader, fragShader, gl.Attrs{
 		{"position", 3, gl.Float},
 		{"color", 3, gl.Float},
@@ -50,15 +54,16 @@ func main() {
 
 	indexBuffer := gl.NewIndexBuffer(indices)
 	s.SetIndexBuffer(indexBuffer)
-	s.Bind()
+	gl.SetShader(s)
 
 	img := loadImg("./.resource/cat.png")
 	tex := gl.NewTexture()
 	tex.UploadImage(img)
+	gl.SetTexture(tex, 0)
 
 	for !window.ShouldClose() {
 		gl.Clear(1, 1, 1, 1)
-		s.Draw(gl.DrawTriangle, 0, 6)
+		gl.Draw(gl.DrawTriangle, 0, 6)
 
 		window.SwapBuffers()
 		glfw.PollEvents()

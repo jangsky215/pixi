@@ -1,11 +1,12 @@
-package gl
+package internal
 
 import (
 	"errors"
 	"fmt"
+	"image/draw"
+	"runtime"
 
 	"image"
-	"image/draw"
 	"reflect"
 	"strings"
 	"unsafe"
@@ -20,9 +21,7 @@ func Init() error {
 	if err := gl.Init(); err != nil {
 		return err
 	}
-	ctx := &Context{}
-
-	gl.GetIntegerv(gl.FRAMEBUFFER_BINDING, &ctx.screenFramebuffer)
+	ctx := newContext()
 
 	theContext = ctx
 
@@ -54,6 +53,8 @@ func newBuffer(gltype uint32, slice interface{}, stride int32) *Buffer {
 		buffer.update(gl.STATIC_DRAW, slice)
 	}
 
+	runtime.SetFinalizer(buffer, (*Buffer).delete)
+
 	return buffer
 }
 
@@ -65,7 +66,7 @@ func NewIndexBuffer(slice []uint16) *Buffer {
 	return newBuffer(gl.ELEMENT_ARRAY_BUFFER, slice, 0)
 }
 
-func (buffer *Buffer) Destroy() {
+func (buffer *Buffer) delete() {
 	gl.DeleteBuffers(1, &buffer.glid)
 }
 
@@ -99,27 +100,31 @@ type Texture struct {
 func NewTexture() *Texture {
 	tex := &Texture{}
 	gl.GenTextures(1, &tex.glid)
+
+	runtime.SetFinalizer(tex, (*Texture).delete)
+
 	return tex
 }
 
-func (tex *Texture) Destroy() {
+func (tex *Texture) delete() {
 	gl.DeleteTextures(1, &tex.glid)
 }
 
-func (tex *Texture) Bind() {
+func (tex *Texture) bind() {
+	gl.ActiveTexture(gl.TEXTURE7)
 	gl.BindTexture(gl.TEXTURE_2D, tex.glid)
 }
 
-func (tex *Texture) ActiveTexture(i int) {
-	gl.ActiveTexture(gl.TEXTURE_2D + uint32(i))
-	tex.Bind()
+func (tex *Texture) activeTexture(i int) {
+	gl.ActiveTexture(gl.TEXTURE0 + uint32(i))
+	gl.BindTexture(gl.TEXTURE_2D, tex.glid)
 }
 
 func (tex *Texture) EnableMipmap() {
 	if tex.mipmap {
 		return
 	}
-	tex.Bind()
+	tex.bind()
 	tex.mipmap = true
 	gl.GenerateMipmap(gl.TEXTURE_2D)
 }
@@ -144,7 +149,7 @@ func (tex *Texture) Upload(pixels []uint8, width, height int) {
 		ptr = gl.Ptr(pixels)
 	}
 
-	tex.Bind()
+	tex.bind()
 	if tex.mipmap {
 		gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR)
 	} else {
@@ -159,88 +164,88 @@ func (tex *Texture) Upload(pixels []uint8, width, height int) {
 }
 
 func (tex *Texture) SubUpload(pixels []uint8, x, y, width, height int) {
-	tex.Bind()
+	tex.bind()
 	gl.PixelStorei(gl.UNPACK_ALIGNMENT, 1)
 	gl.TexSubImage2D(gl.TEXTURE_2D, 0, int32(x), int32(y), int32(width), int32(height),
 		gl.RGBA, gl.UNSIGNED_BYTE, gl.Ptr(pixels))
 }
 
 /*
- *	Framebuffer
+ *	Target
  */
-type Framebuffer struct {
+type Target struct {
 	glid          uint32
 	stencil       uint32
 	width, height int
 	tex           *Texture
 }
 
-func NewFramebuffer(width, height int) *Framebuffer {
-	fb := &Framebuffer{
+func NewTarget(width, height int) *Target {
+	target := &Target{
 		width:  width,
 		height: height,
 		tex:    NewTexture(),
 	}
-	gl.GenFramebuffers(1, &fb.glid)
-	fb.Bind()
+	gl.GenFramebuffers(1, &target.glid)
+	target.bind()
+	theContext.dirtyFlag |= dirtyTarget
 
-	fb.tex.Upload(nil, width, height)
-	gl.FramebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, fb.tex.glid, 0)
+	target.tex.Upload(nil, width, height)
+	gl.FramebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, target.tex.glid, 0)
 
 	if gl.CheckFramebufferStatus(gl.FRAMEBUFFER) != gl.FRAMEBUFFER_COMPLETE {
 		panic("init Framebuffer error")
 	}
 
-	return fb
+	runtime.SetFinalizer(target, (*Target).delete)
+
+	return target
 }
 
-func (fb *Framebuffer) Destroy() {
-	gl.DeleteFramebuffers(1, &fb.glid)
-	if fb.stencil > 0 {
-		gl.DeleteFramebuffers(1, &fb.stencil)
+func (target *Target) delete() {
+	gl.DeleteFramebuffers(1, &target.glid)
+	if target.stencil > 0 {
+		gl.DeleteFramebuffers(1, &target.stencil)
 	}
-	fb.tex.Destroy()
 }
 
-func (fb *Framebuffer) Texture() *Texture {
-	return fb.tex
+func (target *Target) Texture() *Texture {
+	return target.tex
 }
 
-func (fb *Framebuffer) EnableStencil() {
-	if fb.stencil > 0 {
+func (target *Target) EnableStencil() {
+	if target.stencil > 0 {
 		return
 	}
-	gl.CreateFramebuffers(1, &fb.stencil)
-	gl.BindRenderbuffer(gl.RENDERBUFFER, fb.stencil)
+	gl.CreateFramebuffers(1, &target.stencil)
+	gl.BindRenderbuffer(gl.RENDERBUFFER, target.stencil)
 
-	gl.FramebufferRenderbuffer(gl.RENDERBUFFER, gl.DEPTH_STENCIL_ATTACHMENT, gl.RENDERBUFFER, fb.stencil)
-	gl.RenderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_STENCIL, int32(fb.width), int32(fb.height))
+	gl.FramebufferRenderbuffer(gl.RENDERBUFFER, gl.DEPTH_STENCIL_ATTACHMENT, gl.RENDERBUFFER, target.stencil)
+	gl.RenderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_STENCIL, int32(target.width), int32(target.height))
 }
 
-func (fb *Framebuffer) Bind() {
-	gl.BindFramebuffer(gl.FRAMEBUFFER, fb.glid)
+func (target *Target) bind() {
+	if target != nil {
+		gl.BindFramebuffer(gl.FRAMEBUFFER, target.glid)
+	} else {
+		gl.BindFramebuffer(gl.FRAMEBUFFER, 0)
+	}
 }
 
-func (fb *Framebuffer) Unbind() {
-	glid := uint32(GetContext().screenFramebuffer)
-	gl.BindFramebuffer(gl.FRAMEBUFFER, glid)
+func (target *Target) Clear(r, g, b, a float32) {
+	target.bind()
+	Clear(r, g, b, a)
 }
 
-func (fb *Framebuffer) Clear(r, g, b, a float32) {
-	fb.Bind()
-	gl.ClearColor(r, g, b, a)
-	gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
-}
+func (target *Target) Resize(width, height int) {
+	target.width = width
+	target.height = height
 
-func (fb *Framebuffer) Resize(width, height int) {
-	fb.width = width
-	fb.height = height
+	target.tex.Upload(nil, width, height)
 
-	fb.tex.Upload(nil, width, height)
-
-	if fb.stencil > 0 {
-		gl.BindRenderbuffer(gl.RENDERBUFFER, fb.stencil)
-		gl.RenderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_STENCIL, int32(fb.width), int32(fb.height))
+	if target.stencil > 0 {
+		gl.BindRenderbuffer(gl.RENDERBUFFER, target.stencil)
+		gl.RenderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_STENCIL, int32(target.width), int32(target.height))
 	}
 }
 
@@ -340,7 +345,14 @@ func NewShader(vertexSrc, fragmentSrc string, attrs Attrs) *Shader {
 	shader.getAttributes()
 	shader.getUniforms()
 
+	runtime.SetFinalizer(shader, (*Shader).delete)
+
 	return shader
+}
+
+func (shader *Shader) delete() {
+	gl.DeleteShader(shader.glid)
+	gl.DeleteVertexArrays(1, &shader.glvao)
 }
 
 func (shader *Shader) getAttributes() {
@@ -410,13 +422,13 @@ func (shader *Shader) IndexBuffer() *Buffer {
 	return shader.indexBuffer
 }
 
-func (shader *Shader) Bind() {
+func (shader *Shader) bind() {
 	gl.UseProgram(shader.glid)
 	shader.applyTextureUniform()
-	shader.applyBuffer()
+	shader.applyVertex()
 }
 
-func (shader *Shader) applyBuffer() {
+func (shader *Shader) applyVertex() {
 	gl.BindVertexArray(shader.glvao)
 	if shader.bufferDirty {
 		shader.bufferDirty = false
@@ -427,15 +439,6 @@ func (shader *Shader) applyBuffer() {
 		}
 		shader.indexBuffer.bind()
 	}
-}
-
-func (shader *Shader) Draw(mode DrawMode, start, count int) {
-	gl.DrawElements(uint32(mode), int32(count), gl.UNSIGNED_SHORT, unsafe.Pointer(uintptr(start)))
-}
-
-func (shader *Shader) Destroy() {
-	gl.DeleteShader(shader.glid)
-	gl.DeleteVertexArrays(1, &shader.glvao)
 }
 
 // Uniform
@@ -489,14 +492,26 @@ func Viewport(x, y, width, height int) {
 	gl.Viewport(int32(x), int32(y), int32(width), int32(height))
 }
 
-func Enable(cap CapType) {
+func enable(cap CapType) {
 	gl.Enable(uint32(cap))
 }
 
-func Disable(cap CapType) {
+func disable(cap CapType) {
 	gl.Disable(uint32(cap))
 }
 
-func BlendFunc(src, dst BlendFormat) {
+func blendFunc(src, dst BlendFormat) {
 	gl.BlendFunc(uint32(src), uint32(dst))
+}
+
+func depthFunc(xfunc DepthFormat) {
+	gl.DepthFunc(uint32(xfunc))
+}
+
+func depthMask(flag bool) {
+	gl.DepthMask(flag)
+}
+
+func glDraw(mode DrawMode, start, count int) {
+	gl.DrawElements(uint32(mode), int32(count), gl.UNSIGNED_SHORT, unsafe.Pointer(uintptr(start)))
 }

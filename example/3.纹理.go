@@ -4,13 +4,14 @@ import (
 	"runtime"
 
 	"fmt"
-	"github.com/go-gl/glfw/v3.1/glfw"
-	"github.com/jangsky215/pixi/gl"
 	"image"
 	"image/draw"
 	_ "image/png"
 	"os"
 	"time"
+
+	"github.com/go-gl/glfw/v3.1/glfw"
+	gl "github.com/jangsky215/pixi/internal"
 )
 
 func main() {
@@ -41,8 +42,7 @@ func main() {
 	}
 
 	//混合函数 绘制透明纹理
-	gl.Enable(gl.Blend)
-	gl.BlendFunc(gl.SrcAlpha, gl.OneMinusSrcAlpha)
+	gl.SetBlend(gl.BlendSrcAlpha, gl.BlendOneMinusSrcAlpha)
 
 	attrs := gl.Attrs{
 		{"position", 3, gl.Float},
@@ -56,28 +56,27 @@ func main() {
 	s := gl.NewShader(vertShader, fragShader, attrs)
 	s.SetVertexBuffer(vertexBuffer)
 	s.SetIndexBuffer(indexBuffer)
-	s.Bind()
 
 	normalS := gl.NewShader(normalVertShader, normalFragShader, attrs)
 	normalS.SetVertexBuffer(vertexBuffer)
 	normalS.SetIndexBuffer(indexBuffer)
-	normalS.Bind()
 
 	img := loadImg("./.resource/cat.png")
 	tex := gl.NewTexture()
 	tex.UploadImage(img)
+	gl.SetTexture(tex, 0)
 
 	last := time.Now().Unix()
 
 	for !window.ShouldClose() {
 		gl.Clear(1, 1, 1, 1)
 
-		if ((time.Now().Unix()-last)/5)%2 == 1 {
-			s.Bind()
-			s.Draw(gl.DrawTriangle, 0, 6)
+		if ((time.Now().Unix()-last)/5)%2 == 0 {
+			gl.SetShader(s)
+			gl.Draw(gl.DrawTriangle, 0, 6)
 		} else {
-			normalS.Bind()
-			normalS.Draw(gl.DrawTriangle, 0, 6)
+			gl.SetShader(normalS)
+			gl.Draw(gl.DrawTriangle, 0, 6)
 		}
 
 		window.SwapBuffers()

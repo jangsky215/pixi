@@ -4,13 +4,14 @@ import (
 	"runtime"
 
 	"fmt"
-	"github.com/go-gl/glfw/v3.1/glfw"
-	"github.com/jangsky215/pixi/gl"
-	"github.com/jangsky215/pixi/math"
 	"image"
 	"image/draw"
 	_ "image/png"
 	"os"
+
+	"github.com/go-gl/glfw/v3.1/glfw"
+	gl "github.com/jangsky215/pixi/internal"
+	"github.com/jangsky215/pixi/math"
 )
 
 func main() {
@@ -42,8 +43,7 @@ func main() {
 	}
 
 	//混合函数 绘制透明纹理
-	gl.Enable(gl.Blend)
-	gl.BlendFunc(gl.SrcAlpha, gl.OneMinusSrcAlpha)
+	gl.SetBlend(gl.BlendSrcAlpha, gl.BlendOneMinusSrcAlpha)
 
 	attrs := gl.Attrs{
 		{"position", 3, gl.Float},
@@ -53,7 +53,7 @@ func main() {
 
 	s := gl.NewShader(vertShader, fragShader, attrs)
 
-	vertexBuffer := gl.NewVertexBuffer(nil, 8*4)
+	vertexBuffer := gl.NewVertexBuffer(vertices, 8*4)
 	s.SetVertexBuffer(vertexBuffer)
 
 	indexBuffer := gl.NewIndexBuffer(indices)
@@ -62,15 +62,17 @@ func main() {
 	img := loadImg("./.resource/cat.png")
 	tex := gl.NewTexture()
 	tex.UploadImage(img)
+	gl.SetTexture(tex, 0)
 
 	aspect := float32(width) / float32(height) // = glheight / glwidth
 	angle := float32(0)
 	for !window.ShouldClose() {
 		gl.Clear(1, 1, 1, 1)
 
+		gl.SetTexture(tex, 0)
 		vertexBuffer.Upload(vertices)
-		s.Bind()
-		s.Draw(gl.DrawTriangle, 0, 6)
+		gl.SetShader(s)
+		gl.Draw(gl.DrawTriangle, 0, 6)
 
 		angle += 0.5
 		m := &math.Matrix{}
@@ -88,8 +90,9 @@ func main() {
 		}
 		vertexBuffer.Upload(vertex)
 
-		s.Bind()
-		s.Draw(gl.DrawTriangle, 0, 6)
+		gl.SetTexture(tex, 0)
+		gl.SetShader(s)
+		gl.Draw(gl.DrawTriangle, 0, 6)
 
 		window.SwapBuffers()
 		glfw.PollEvents()

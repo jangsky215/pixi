@@ -4,13 +4,14 @@ import (
 	"runtime"
 
 	"fmt"
-	"github.com/go-gl/glfw/v3.1/glfw"
-	"github.com/jangsky215/pixi/gl"
-	"github.com/jangsky215/pixi/math"
 	"image"
 	"image/draw"
 	_ "image/png"
 	"os"
+
+	"github.com/go-gl/glfw/v3.1/glfw"
+	gl "github.com/jangsky215/pixi/internal"
+	"github.com/jangsky215/pixi/math"
 )
 
 func main() {
@@ -42,45 +43,44 @@ func main() {
 	}
 
 	//混合函数 绘制透明纹理
-	gl.Enable(gl.Blend)
-	gl.BlendFunc(gl.SrcAlpha, gl.OneMinusSrcAlpha)
+	gl.SetBlend(gl.BlendSrcAlpha, gl.BlendOneMinusSrcAlpha)
 
-	s := gl.NewShader(vertShader, fragShader, gl.Attrs{
+	attrs := gl.Attrs{
 		{"position", 3, gl.Float},
 		{"color", 3, gl.Float},
 		{"texCoord", 2, gl.Float},
-	})
+	}
 
-	vertexBuffer := gl.NewVertexBuffer(nil, 8*4)
+	s := gl.NewShader(vertShader, fragShader, attrs)
+
+	vertexBuffer := gl.NewVertexBuffer(vertices, 8*4)
 	s.SetVertexBuffer(vertexBuffer)
 
 	indexBuffer := gl.NewIndexBuffer(indices)
 	s.SetIndexBuffer(indexBuffer)
-	s.Bind()
 
 	img := loadImg("./.resource/cat.png")
 	tex := gl.NewTexture()
 	tex.UploadImage(img)
+	gl.SetTexture(tex, 0)
 
-	fb := gl.NewFramebuffer(width/2, height)
-	fb.Unbind()
+	fb := gl.NewTarget(width/2, height)
 
 	aspect := float32(width) / float32(height) // = glheight / glwidth
 	angle := float32(0)
 	for !window.ShouldClose() {
 		gl.Clear(1, 1, 1, 1)
 
-		tex.Bind()
-
+		gl.SetTarget(nil)
+		gl.SetTexture(tex, 0)
 		vertexBuffer.Upload(vertices)
-		s.Bind()
-		s.Draw(gl.DrawTriangle, 0, 6)
+		gl.SetShader(s)
+		gl.Draw(gl.DrawTriangle, 0, 6)
 
 		fb.Clear(1, 0, 0, 1)
-		s.Bind()
-		s.Draw(gl.DrawTriangle, 0, 6)
-		fb.Unbind()
-		fb.Texture().Bind()
+		gl.SetTarget(fb)
+		gl.Draw(gl.DrawTriangle, 0, 6)
+		gl.SetTexture(fb.Texture(), 0)
 
 		angle += 0.5
 		m := &math.Matrix{}
@@ -98,8 +98,8 @@ func main() {
 		}
 		vertexBuffer.Upload(vertex)
 
-		s.Bind()
-		s.Draw(gl.DrawTriangle, 0, 6)
+		gl.SetTarget(nil)
+		gl.Draw(gl.DrawTriangle, 0, 6)
 
 		window.SwapBuffers()
 		glfw.PollEvents()

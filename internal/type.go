@@ -1,15 +1,6 @@
-package gl
+package internal
 
-type Context struct {
-	context
-	screenFramebuffer int32 //iOS 默认 Framebuffer 可能不为0
-}
-
-var theContext *Context
-
-func GetContext() *Context {
-	return theContext
-}
+import "math"
 
 type DrawMode int
 
@@ -51,22 +42,24 @@ type Attrs []Attr
 type BlendFormat uint32
 
 const (
-	Zero             BlendFormat = 0      //gl.ZERO
-	One              BlendFormat = 1      //gl.ONE
-	SrcColor         BlendFormat = 0x0300 //gl.SRC_COLOR
-	OneMinusSrcColor BlendFormat = 0x0301 //gl.ONE_MINUS_SRC_COLOR
-	SrcAlpha         BlendFormat = 0x0302 //gl.SRC_ALPHA
-	OneMinusSrcAlpha BlendFormat = 0x0303 //gl.ONE_MINUS_SRC_ALPHA
-	DstAlpha         BlendFormat = 0x0304 //gl.DST_ALPHA
-	OneMinusDstAlpha BlendFormat = 0x0305 //gl.ONE_MINUS_DST_ALPHA
-	DstColor         BlendFormat = 0x0306 //gl.DST_COLOR
-	OneMinusDstColor BlendFormat = 0x0307 //gl.ONE_MINUS_DST_COLOR
-	SrcAlphaSaturate BlendFormat = 0x0308 //gl.SRC_ALPHA_SATURATE
+	BlendDisable          BlendFormat = math.MaxUint32
+	BlendZero             BlendFormat = 0      //gl.ZERO
+	BlendOne              BlendFormat = 1      //gl.ONE
+	BlendSrcColor         BlendFormat = 0x0300 //gl.SRC_COLOR
+	BlendOneMinusSrcColor BlendFormat = 0x0301 //gl.ONE_MINUS_SRC_COLOR
+	BlendSrcAlpha         BlendFormat = 0x0302 //gl.SRC_ALPHA
+	BlendOneMinusSrcAlpha BlendFormat = 0x0303 //gl.ONE_MINUS_SRC_ALPHA
+	BlendDstAlpha         BlendFormat = 0x0304 //gl.DST_ALPHA
+	BlendOneMinusDstAlpha BlendFormat = 0x0305 //gl.ONE_MINUS_DST_ALPHA
+	BlendDstColor         BlendFormat = 0x0306 //gl.DST_COLOR
+	BlendOneMinusDstColor BlendFormat = 0x0307 //gl.ONE_MINUS_DST_COLOR
+	BlendSrcAlphaSaturate BlendFormat = 0x0308 //gl.SRC_ALPHA_SATURATE
 )
 
 type DepthFormat uint32
 
 const (
+	DepthDisable      DepthFormat = math.MaxUint32
 	DepthLess         DepthFormat = 0x0201 //gl.LESS
 	DepthEqual        DepthFormat = 0x0202 //gl.EQUAL
 	DepthLessEqual    DepthFormat = 0x0203 //gl.LEQUAL

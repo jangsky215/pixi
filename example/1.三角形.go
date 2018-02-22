@@ -4,7 +4,7 @@ import (
 	"runtime"
 
 	glfw "github.com/go-gl/glfw/v3.1/glfw"
-	"github.com/jangsky215/pixi/gl"
+	gl "github.com/jangsky215/pixi/internal"
 )
 
 func main() {
@@ -37,18 +37,17 @@ func main() {
 	s := gl.NewShader(vertexShader, fragmentShader, gl.Attrs{
 		{"vp", 3, gl.Float},
 	})
-	s.Bind()
 
 	vertexBuffer := gl.NewVertexBuffer(points, 3*4)
 	s.SetVertexBuffer(vertexBuffer)
 
 	indexBuffer := gl.NewIndexBuffer(index)
 	s.SetIndexBuffer(indexBuffer)
-	s.Bind()
+	gl.SetShader(s)
 
 	for !window.ShouldClose() {
 		gl.Clear(1, 1, 1, 1)
-		s.Draw(gl.DrawTriangle, 0, 3)
+		gl.Draw(gl.DrawTriangle, 0, 3)
 
 		window.SwapBuffers()
 		glfw.PollEvents()
