@@ -512,6 +512,6 @@ func depthMask(flag bool) {
 	gl.DepthMask(flag)
 }
 
-func glDraw(mode DrawMode, start, count int) {
-	gl.DrawElements(uint32(mode), int32(count), gl.UNSIGNED_SHORT, unsafe.Pointer(uintptr(start)))
+func glDraw(start, count int) {
+	gl.DrawElements(gl.TRIANGLES, int32(count), gl.UNSIGNED_SHORT, unsafe.Pointer(uintptr(start)))
 }

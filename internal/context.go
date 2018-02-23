@@ -126,9 +126,9 @@ func (c *Context) commit() {
 	c.dirtyFlag = 0
 }
 
-func Draw(mode DrawMode, start, count int) {
+func Draw(start, count int) {
 	if count > 0 {
 		theContext.commit()
-		glDraw(mode, start, count)
+		glDraw(start, count)
 	}
 }

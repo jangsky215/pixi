@@ -73,11 +73,10 @@ func main() {
 
 		if ((time.Now().Unix()-last)/5)%2 == 0 {
 			gl.SetShader(s)
-			gl.Draw(gl.DrawTriangle, 0, 6)
 		} else {
 			gl.SetShader(normalS)
-			gl.Draw(gl.DrawTriangle, 0, 6)
 		}
+		gl.Draw(0, 6)
 
 		window.SwapBuffers()
 		glfw.PollEvents()

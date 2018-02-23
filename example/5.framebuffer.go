@@ -1,12 +1,15 @@
 package main
 
 import (
+	"log"
+	"net/http"
 	"runtime"
 
 	"fmt"
 	"image"
 	"image/draw"
 	_ "image/png"
+	_ "net/http/pprof"
 	"os"
 
 	"github.com/go-gl/glfw/v3.1/glfw"
@@ -16,6 +19,12 @@ import (
 
 func main() {
 	runtime.LockOSThread()
+
+	//远程获取pprof数据
+	go func() {
+		// http://127.0.0.1:8080/debug/pprof/
+		log.Println(http.ListenAndServe("localhost:8080", nil))
+	}()
 
 	if err := glfw.Init(); err != nil {
 		panic(err)
@@ -76,11 +85,11 @@ func main() {
 		gl.SetTexture(tex, 0)
 		vertexBuffer.Upload(vertices)
 		gl.SetShader(s)
-		gl.Draw(gl.DrawTriangle, 0, 6)
+		gl.Draw(0, 6)
 
 		fb.Clear(1, 0, 0, 1)
 		gl.SetTarget(fb)
-		gl.Draw(gl.DrawTriangle, 0, 6)
+		gl.Draw(0, 6)
 
 		angle += 0.5
 		m := &math.Matrix{}
@@ -100,7 +109,7 @@ func main() {
 
 		gl.SetTarget(nil)
 		gl.SetTexture(fb.Texture(), 0)
-		gl.Draw(gl.DrawTriangle, 0, 6)
+		gl.Draw(0, 6)
 
 		window.SwapBuffers()
 		glfw.PollEvents()

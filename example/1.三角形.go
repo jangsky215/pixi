@@ -47,7 +47,7 @@ func main() {
 
 	for !window.ShouldClose() {
 		gl.Clear(1, 1, 1, 1)
-		gl.Draw(gl.DrawTriangle, 0, 3)
+		gl.Draw(0, 3)
 
 		window.SwapBuffers()
 		glfw.PollEvents()

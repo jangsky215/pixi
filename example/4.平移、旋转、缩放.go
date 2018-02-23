@@ -72,7 +72,7 @@ func main() {
 		gl.SetTexture(tex, 0)
 		vertexBuffer.Upload(vertices)
 		gl.SetShader(s)
-		gl.Draw(gl.DrawTriangle, 0, 6)
+		gl.Draw(0, 6)
 
 		angle += 0.5
 		m := &math.Matrix{}
@@ -92,7 +92,7 @@ func main() {
 
 		gl.SetTexture(tex, 0)
 		gl.SetShader(s)
-		gl.Draw(gl.DrawTriangle, 0, 6)
+		gl.Draw(0, 6)
 
 		window.SwapBuffers()
 		glfw.PollEvents()

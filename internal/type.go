@@ -2,13 +2,6 @@ package internal
 
 import "math"
 
-type DrawMode int
-
-const (
-	DrawTriangle DrawMode = 0x0004 //gl.TRIANGLES
-	DrawLine     DrawMode = 0x1B01 //gl.LINE
-)
-
 type AttrType int
 
 const (
@@ -28,7 +21,7 @@ func (at AttrType) size() int {
 }
 
 func (at AttrType) normalized() bool {
-	return at == Float
+	return at != Float
 }
 
 type Attr struct {
