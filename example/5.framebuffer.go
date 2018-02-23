@@ -50,8 +50,9 @@ func main() {
 		{"color", 3, gl.Float},
 		{"texCoord", 2, gl.Float},
 	}
-
-	s := gl.NewShader(vertShader, fragShader, attrs)
+	gl.SetAttrs(attrs)
+	s := gl.NewShader(vertShader, fragShader, nil)
+	//s := gl.NewShader(vertShader, fragShader, attrs)
 
 	vertexBuffer := gl.NewVertexBuffer(vertices, 8*4)
 	s.SetVertexBuffer(vertexBuffer)
@@ -80,7 +81,6 @@ func main() {
 		fb.Clear(1, 0, 0, 1)
 		gl.SetTarget(fb)
 		gl.Draw(gl.DrawTriangle, 0, 6)
-		gl.SetTexture(fb.Texture(), 0)
 
 		angle += 0.5
 		m := &math.Matrix{}
@@ -99,6 +99,7 @@ func main() {
 		vertexBuffer.Upload(vertex)
 
 		gl.SetTarget(nil)
+		gl.SetTexture(fb.Texture(), 0)
 		gl.Draw(gl.DrawTriangle, 0, 6)
 
 		window.SwapBuffers()

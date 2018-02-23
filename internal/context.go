@@ -13,6 +13,7 @@ const (
 type Context struct {
 	context
 	dirtyFlag          DirtyFlag
+	attrs              Attrs
 	blendSrc, blendDst BlendFormat
 	depth              DepthFormat
 	depthmask          bool
@@ -30,6 +31,10 @@ var theContext *Context
 
 func GetContext() *Context {
 	return theContext
+}
+
+func SetAttrs(attrs Attrs) {
+	theContext.attrs = attrs
 }
 
 func SetShader(shader *Shader) {
@@ -82,10 +87,8 @@ func (c *Context) commit() {
 	c.shader.bind()
 
 	if c.dirtyFlag&dirtyTexture != 0 {
-		for i, tex := range c.texture {
-			if tex != nil {
-				tex.activeTexture(i)
-			}
+		for i := 0; i < len(c.shader.samplers); i++ {
+			c.texture[i].activeTexture(i)
 		}
 	}
 

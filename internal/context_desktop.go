@@ -253,11 +253,11 @@ func (target *Target) Resize(width, height int) {
  *	Shader
  */
 type Shader struct {
-	glid            uint32
-	glvao           uint32
-	attributes      map[string]int32
-	uniforms        map[string]int32
-	textureUniforms []int32
+	glid       uint32
+	glvao      uint32
+	attributes map[string]int32
+	uniforms   map[string]int32
+	samplers   []int32
 
 	attribLayout []layout
 	bufferDirty  bool
@@ -296,6 +296,9 @@ func compileShader(shaderType uint32, source string) uint32 {
 }
 
 func NewShader(vertexSrc, fragmentSrc string, attrs Attrs) *Shader {
+	if len(attrs) == 0 {
+		attrs = theContext.attrs
+	}
 	vertShader := compileShader(gl.VERTEX_SHADER, vertexSrc)
 	fragShader := compileShader(gl.FRAGMENT_SHADER, fragmentSrc)
 
@@ -392,11 +395,8 @@ func (shader *Shader) getUniforms() {
 		name := string(data[:length])
 		shader.uniforms[name] = loc
 		if xtype == gl.SAMPLER_2D {
-			shader.textureUniforms = append(shader.textureUniforms, loc)
+			shader.samplers = append(shader.samplers, loc)
 		}
-	}
-	if len(shader.textureUniforms) == 1 {
-		shader.textureUniforms = nil
 	}
 }
 
@@ -444,7 +444,7 @@ func (shader *Shader) applyVertex() {
 // Uniform
 func (shader *Shader) applyTextureUniform() {
 	//绑定纹理目标
-	for i, loc := range shader.textureUniforms {
+	for i, loc := range shader.samplers {
 		gl.Uniform1i(int32(loc), int32(i))
 	}
 }
