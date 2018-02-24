@@ -425,7 +425,6 @@ func (shader *Shader) IndexBuffer() *Buffer {
 func (shader *Shader) bind() {
 	gl.UseProgram(shader.glid)
 	shader.applyTextureUniform()
-	shader.applyVertex()
 }
 
 func (shader *Shader) applyVertex() {

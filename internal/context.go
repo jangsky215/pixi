@@ -39,7 +39,10 @@ func SetAttrs(attrs Attrs) {
 
 func SetShader(shader *Shader) {
 	c := theContext
-	c.shader = shader
+	if c.shader != shader {
+		c.shader = shader
+		shader.bind()
+	}
 }
 
 func SetTexture(tex *Texture, slot int) {
@@ -84,7 +87,7 @@ func EnableScissor(enable bool) {
 }
 
 func (c *Context) commit() {
-	c.shader.bind()
+	c.shader.applyVertex()
 
 	if c.dirtyFlag&dirtyTexture != 0 {
 		for i := 0; i < len(c.shader.samplers); i++ {
