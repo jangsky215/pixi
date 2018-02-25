@@ -8,6 +8,7 @@ const (
 	dirtyDepth
 	dirtyTarget
 	dirtyScissor
+	dirtyInvalid = 0
 )
 
 type Context struct {
@@ -89,6 +90,10 @@ func EnableScissor(enable bool) {
 func (c *Context) commit() {
 	c.shader.applyVertex()
 
+	if c.dirtyFlag == dirtyInvalid {
+		return
+	}
+
 	if c.dirtyFlag&dirtyTexture != 0 {
 		for i := 0; i < len(c.shader.samplers); i++ {
 			c.texture[i].activeTexture(i)
@@ -126,7 +131,7 @@ func (c *Context) commit() {
 		}
 	}
 
-	c.dirtyFlag = 0
+	c.dirtyFlag = dirtyInvalid
 }
 
 func Draw(start, count int) {
